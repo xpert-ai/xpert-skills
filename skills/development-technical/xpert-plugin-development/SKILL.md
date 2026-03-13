@@ -16,17 +16,18 @@ Use this skill when the task involves plugin work in the Xpert plugin repository
 Repository:
 
 1. Official upstream: `https://github.com/xpert-ai/xpert-plugins.git`
-2. Local workspace: `/Users/ysz/Desktop/project/xpert-plugins`
-3. Local platform backend: `/Users/ysz/Desktop/project/xpert-pro`
+2. Local plugin repository root: discover from the current workspace instead of assuming a fixed absolute path
+3. Local platform backend root: discover from the current workspace instead of assuming a fixed absolute path
 
 ## Workflow
 
 1. Identify the plugin type first: general tool plugin, model plugin, integration plugin, or middleware plugin.
-2. Read `references/general.md` for repository layout, install flow, test flow, versioning, and PR rules.
-3. If the task is about model providers, yaml, assets, or packaging, also read `references/model-plugins.md`.
-4. If the task is about callbacks, bindings, notifications, or third-party platform connectivity, also read `references/integration-middleware.md`.
-5. Prefer local installation via `source=code + workspacePath` during development.
-6. Before finishing, verify build output, installation, runtime behavior, and submit only relevant files.
+2. Discover the actual local paths for the plugin repository, the target plugin directory, and the platform backend before running commands.
+3. Read `references/general.md` for repository layout, install flow, test flow, versioning, and PR rules.
+4. If the task is about model providers, yaml, assets, or packaging, also read `references/model-plugins.md`.
+5. If the task is about callbacks, bindings, notifications, or third-party platform connectivity, also read `references/integration-middleware.md`.
+6. Prefer local installation via `source=code + workspacePath` during development.
+7. Before finishing, verify build output, installation, runtime behavior, and submit only relevant files.
 
 ## Rules
 
@@ -35,6 +36,7 @@ Repository:
 3. Do not expose platform capabilities as tools unless the upstream platform APIs are confirmed to exist and are stable enough for users.
 4. Treat `createTools()` and runtime tool execution as separate contracts and verify both.
 5. When the platform backend code changes, restart the backend before concluding installation or loading is broken.
+6. Do not hardcode machine-specific absolute paths in docs, scripts, or instructions. Use discovered paths or placeholders such as `<plugin-repo-root>` and `<platform-root>`.
 
 ## Output expectations
 

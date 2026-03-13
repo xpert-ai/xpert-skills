@@ -68,14 +68,22 @@ Preferred path:
 2. install into the running local platform through `POST /api/plugin`
 3. use `source=code + workspacePath`
 
+Before running commands, discover these values from the local environment:
+
+1. `<plugin-repo-root>`
+2. `<plugin-relative-path>`
+3. `<platform-api-base-url>`
+4. `<tenant-id>`
+5. `<organization-id>`
+
 Template:
 
 ```bash
 PLUGIN_NAME="@xpert-ai/plugin-<name>"
-PLUGIN_PATH="/Users/ysz/Desktop/project/xpert-plugins/<plugin-relative-path>"
+PLUGIN_PATH="<plugin-repo-root>/<plugin-relative-path>"
 PLUGIN_LOAD_VERSION="$(date +%Y%m%d%H%M%S)"
 
-curl -sS -X POST http://127.0.0.1:3000/api/plugin \
+curl -sS -X POST <platform-api-base-url>/api/plugin \
   -H "Authorization: Bearer $TOKEN" \
   -H "tenant-id: $TENANT_ID" \
   -H "organization-id: $ORG_ID" \
@@ -91,7 +99,7 @@ curl -sS -X POST http://127.0.0.1:3000/api/plugin \
 Verify:
 
 ```bash
-curl -sS -X POST http://127.0.0.1:3000/api/plugin/by-names \
+curl -sS -X POST <platform-api-base-url>/api/plugin/by-names \
   -H "Authorization: Bearer $TOKEN" \
   -H "tenant-id: $TENANT_ID" \
   -H "organization-id: $ORG_ID" \
