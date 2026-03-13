@@ -53,6 +53,22 @@ The frontmatter requires only two fields:
 
 The markdown content below contains the instructions, examples, and guidelines that Xpert will follow. For more details, see [How to create custom skills](https://support.claude.com/en/articles/12512198-creating-custom-skills).
 
+# Validate Skills
+
+Use the repository validator before committing new skills:
+
+```bash
+node scripts/validate-skills.mjs
+```
+
+The validator checks that each skill under `skills/`:
+- contains a `SKILL.md` file
+- has valid YAML frontmatter
+- defines unique `name` and `description` fields
+- uses kebab-case for `name`
+- matches the skill folder name
+- contains non-empty instructions below the frontmatter
+
 # Partner Skills
 
 Skills are a great way to teach Xpert how to get better at using specific pieces of software. As we see awesome example skills from partners, we may highlight some of them here:
