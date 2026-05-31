@@ -1,0 +1,4 @@
+interface:
+  display_name: "Xpert Agentic App Developer"
+  short_description: "Build Xpert agentic app plugins"
+  default_prompt: "Use $xpert-agentic-app-developer to design and implement an Xpert custom agentic app plugin."
