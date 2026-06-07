@@ -186,6 +186,7 @@ Security and integration rules:
 - Route iframe data and actions through the platform bridge and view-host.
 - Declare every backend interaction in the manifest before the remote component uses it.
 - Use file actions for uploads and JSON actions for normal commands.
+- Remote component iframes are sandboxed and may not include `allow-modals`; do not rely on `window.confirm`, `window.alert`, or `window.prompt`. Implement destructive-action confirmation with inline UI state, a small confirmation panel, or a host/view action flow instead.
 
 ## Tool Completion Events
 
@@ -261,5 +262,6 @@ Before finishing, verify:
 - Middleware tools have schemas, descriptions, ordered workflow, per-item persistence, and failure reporting.
 - Data model preserves source evidence, confidence, review status, and failure reasons.
 - Workbench manifest declares data source, actions, file actions, host events, and remote component entry when used.
+- Remote component UI avoids browser modal APIs such as `window.confirm`, `window.alert`, and `window.prompt`; sandbox-safe confirmations are implemented inline.
 - Assistant template includes required plugins/capabilities and practical starter prompts.
 - Tests cover service behavior, middleware tool calls, manifest/view actions, remote component bridge behavior, and end-to-end user flow.
