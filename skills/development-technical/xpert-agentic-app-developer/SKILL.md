@@ -54,6 +54,8 @@ Each plugin package should declare its package metadata and SDK peer dependency:
 
 Keep `@xpert-ai/plugin-sdk` in `peerDependencies`, not `dependencies`, so the plugin does not bundle its own SDK copy.
 
+When updating `@xpert-ai/contracts` or `@xpert-ai/plugin-sdk`, verify the versions are actually published or available from the active workspace before committing lockfile changes. If a requested peer range is not published yet, do not force a broad `pnpm-lock.yaml` rewrite or disable peer installation for the whole workspace; record the peer range only when the host is expected to provide it, and keep development-only type packages in `devDependencies` only when they are needed for local compilation.
+
 ## Plugin Entry Pattern
 
 Define `XpertPlugin` metadata as the app-facing capability contract. For data-xpert integration, prefer `targetApps` and `targetAppMeta` over ad hoc top-level business metadata.
@@ -106,6 +108,8 @@ export class ContractReviewPlugin {}
 
 Model for review and recovery, not only for successful tool calls. Persist source document identity, page or location, evidence text, confidence, Agent rationale, human review status, comments, retry jobs, and failure reasons when relevant.
 
+Every plugin entity must support tenant and organization isolation. Add nullable `tenantId` and `organizationId` columns plus a composite index to each persisted entity, populate them from the Integration record or current `RequestContext` on every write, and scope reads, updates, deletes, list endpoints, duplicate checks, cache keys, and xpert/integration reverse lookups by these fields whenever they are available. Do not query plugin-owned data by only business IDs such as `integrationId`, `xpertId`, or external account IDs when tenant or organization context is known.
+
 ## Agent Middleware Tools
 
 Expose business actions through middleware tools. Keep each tool narrow and explicit. Prefer ordered, restartable workflows over one giant tool.
@@ -152,6 +156,32 @@ const saveContractHeaderTool = tool(
 
 Add a Workbench view when users must review, correct, approve, reject, upload files, or submit results. Use a remote component iframe when the UI needs custom interaction beyond declarative tables and forms.
 
+For React remote component views, prefer TSX as the default development mode. Implement the view as maintainable React TypeScript source, preferably `remote-components/<entry>/src/main.tsx` plus supporting `*.ts`/`*.tsx` files, and generate the iframe entry `app.js` through a repeatable build step such as esbuild. Do not hand-maintain a large `React.createElement` `app.js` as the source of truth unless the user explicitly asks for a no-build static script or the existing plugin already has a deliberate no-build convention. Keep the generated `app.js` only as the runtime artifact read by `renderRemoteReactIframeHtml`, and wire `build`, `typecheck` or an equivalent check so stale generated output is caught.
+
+For React view components, keep user-facing static text in a small i18n dictionary or the host platform i18n mechanism instead of hardcoding strings directly in JSX. Resolve text from the remote component host locale when available, provide at least the product's primary locale and English for reusable plugins, and leave backend audit/status values raw unless there is an explicit display mapping.
+
+For remote component data loading, route iframe requests through the platform bridge (`requestData` / `executeAction`) and the view provider. Keep initial `getViewData` responses light enough for first paint, then use tab-specific remote pagination for large tables. A stable pattern is:
+
+- Frontend sends `requestData` with `query.page`, `query.pageSize`, `query.search`, and `query.parameters.table`.
+- Use one table key per dataset, such as `accounts`, `conversations`, `messages`, or `logs`.
+- Return `{ tableKey, table: { key, items, total, page, pageSize } }` from the view provider.
+- Keep each tab's filters, page, and page size independent in component state.
+- Reset the page to `1` whenever filters change.
+
+`XpertViewQuery.parameters` only supports scalar values or scalar arrays. Do not send nested filter objects directly from a remote component. Serialize complex filters as a JSON string parameter such as `filtersJson`, parse it in the view provider, and tolerate malformed JSON by falling back to `{}`.
+
+For view icons, prefer the object form supported by recent contracts:
+
+```ts
+const VIEW_ICON = {
+  type: 'svg',
+  value: '<svg ...>',
+  alt: 'Contract Review'
+} satisfies IconDefinition
+```
+
+Use this `IconDefinition` for manifest `icon` and fixed workbench menu icons. If the currently resolved `plugin-sdk` still types those fields as `string`, keep the runtime object icon and use a narrow compatibility cast at the icon assignment rather than weakening the whole manifest type.
+
 Manifest essentials:
 
 ```ts
@@ -186,7 +216,8 @@ Security and integration rules:
 - Route iframe data and actions through the platform bridge and view-host.
 - Declare every backend interaction in the manifest before the remote component uses it.
 - Use file actions for uploads and JSON actions for normal commands.
-- Remote component iframes are sandboxed and may not include `allow-modals`; do not rely on `window.confirm`, `window.alert`, or `window.prompt`. Implement destructive-action confirmation with inline UI state, a small confirmation panel, or a host/view action flow instead.
+- For table views, declare pagination/search support in `querySchema`, and keep backend list endpoints tenant/organization scoped before filtering and paginating.- Remote component iframes are sandboxed and may not include `allow-modals`; do not rely on `window.confirm`, `window.alert`, or `window.prompt`. Implement destructive-action confirmation with inline UI state, a small confirmation panel, or a host/view action flow instead.
+
 
 ## Tool Completion Events
 
@@ -242,6 +273,8 @@ pnpm plugin:install:local \
 
 After changes, rebuild the independent plugin package and reinstall or reload it. For production, either publish the plugin as an npm/internal artifact and install it through the platform plugin flow, or include it as a platform-owned built-in system plugin when that is truly intended.
 
+When developing against a local Xpert runtime, rebuilding the source package may not update the already installed runtime copy. Locate the installed plugin under the host plugin directory and sync or reinstall the built `dist`, remote component assets, scripts, package metadata, and docs before testing the UI. Re-run the plugin build after TSX changes so generated `app.js` matches source.
+
 ## Documentation Guidance
 
 When writing user-facing docs for this workflow:
@@ -259,9 +292,12 @@ Before finishing, verify:
 - Plugin metadata declares `targetApps`, `targetAppMeta`, business types, and capabilities.
 - SDK dependency is a peer dependency.
 - Server module registers entities, services, middleware, and view providers.
+- All plugin entities include `tenantId` and `organizationId`, write paths populate them, and all data reads/mutations are scoped by tenant/organization whenever context is available.
 - Middleware tools have schemas, descriptions, ordered workflow, per-item persistence, and failure reporting.
 - Data model preserves source evidence, confidence, review status, and failure reasons.
 - Workbench manifest declares data source, actions, file actions, host events, and remote component entry when used.
+- Remote component table views use scalar query parameters, remote pagination, per-tab filters, and total/page/pageSize metadata instead of fetching all rows into the iframe.
+- View icons use `IconDefinition` object form where supported, with any SDK compatibility cast scoped to the icon field only.
 - Remote component UI avoids browser modal APIs such as `window.confirm`, `window.alert`, and `window.prompt`; sandbox-safe confirmations are implemented inline.
 - Assistant template includes required plugins/capabilities and practical starter prompts.
 - Tests cover service behavior, middleware tool calls, manifest/view actions, remote component bridge behavior, and end-to-end user flow.
