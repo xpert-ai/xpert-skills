@@ -199,11 +199,12 @@ Do not write normal logs to stdout from a stdio MCP server. stdout is reserved f
 
 1. The initial app resource URI must use the `ui://` scheme.
 2. The app resource must return `text/html;profile=mcp-app`; use `RESOURCE_MIME_TYPE` from `@modelcontextprotocol/ext-apps/server`.
-3. Resource `_meta.ui`, not tool `_meta.ui`, owns CSP, permissions, `domain`, and `prefersBorder`.
-4. Content item metadata from `resources/read` is authoritative. `resources/list` metadata from `registerAppResource` is a fallback.
-5. Do not store raw app HTML in chat history.
-6. For small demos, returning HTML from a TypeScript function is acceptable.
-7. For production apps, keep app source as normal frontend files and bundle to static HTML/JS during build; the MCP resource handler can read the built artifact from `dist`.
+3. Resource `_meta.ui`, not tool `_meta.ui`, owns display metadata (`title`, `description`, `icon`) plus CSP, permissions, `domain`, and `prefersBorder`.
+4. `title` and `description` can be strings or Xpert-style `I18nObject` values; `icon` should use the shared `IconDefinition` shape.
+5. Content item metadata from `resources/read` is authoritative. `resources/list` metadata from `registerAppResource` is a fallback.
+6. Do not store raw app HTML in chat history.
+7. For small demos, returning HTML from a TypeScript function is acceptable.
+8. For production apps, keep app source as normal frontend files and bundle to static HTML/JS during build; the MCP resource handler can read the built artifact from `dist`.
 
 ## Centralized MCP App Frontend Source
 
@@ -412,7 +413,8 @@ At minimum, app HTML should:
 5. Read same-server MCP resources with `resources/read` when needed.
 6. Open external links through `ui/open-link` with `params.url`.
 7. Send `ui/notifications/size-changed` after layout changes.
-8. Avoid direct API calls to the Xpert backend.
+8. Localize iframe UI from `ui/initialize.hostContext.locale`, `hostContext.language`, and `hostContext.direction`; ChatKit also sets the HTML `lang` and `dir` attributes before the app runs.
+9. Avoid direct API calls to the Xpert backend.
 
 ## ChatKit Theme Variables
 
@@ -458,6 +460,8 @@ const mutedTextColor = styles.getPropertyValue('--mcp-app-color-muted-foreground
 
 `ui/initialize` also returns `hostContext.theme` as `light` or `dark` and `hostContext.themeCssVariables` as the same variable map. CSS variables are the source of truth for visual styling; the initialize payload is useful for libraries that need object-based theme initialization.
 
+`ui/initialize` returns `hostContext.locale`, `hostContext.language`, and `hostContext.direction`. Keep MCP tool results structured and mostly language-neutral, then localize labels, summaries, numbers, dates, chart titles, validation messages, and dimension display names in the app frontend.
+
 For business charts, do not blindly use host UI colors or neutral `--mcp-app-color-chart-*` hints as data series colors. Define app-owned semantic palette variables such as `--sales-chart-revenue`, `--sales-chart-margin`, or `--risk-chart-high` when the chart needs stronger visual distinction. Continue using `--mcp-app-*` for the app shell, typography, borders, inputs, and panel surfaces.
 
 Do not read ChatKit private variables such as `--background` directly from the iframe, do not depend on ChatKit DOM classes, and do not hardcode tenant-specific palettes inside plugin assets.
@@ -490,7 +494,7 @@ Cover:
 3. `tools/list` returns model-visible tools and excludes app-only tools
 4. model-visible tool result includes `_meta.ui.resourceUri`
 5. MCP App resource returns `text/html;profile=mcp-app`
-6. resource metadata includes needed `_meta.ui.csp`, `_meta.ui.permissions`, and `prefersBorder`
+6. resource metadata includes display fields (`title`, `description`, `icon`) plus needed `_meta.ui.csp`, `_meta.ui.permissions`, and `prefersBorder`
 7. `structuredContent` shape matches iframe expectations
 8. app-only tools contain `_meta.ui.visibility = ['app']`
 9. Toolset policy enables every tool the app needs

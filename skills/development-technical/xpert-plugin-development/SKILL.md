@@ -40,9 +40,10 @@ Repository:
 5. When the platform backend code changes, restart the backend before concluding installation or loading is broken.
 6. Do not hardcode machine-specific absolute paths in docs, scripts, or instructions. Use discovered paths or placeholders such as `<plugin-repo-root>` and `<platform-root>`.
 7. For plugin-managed MCP servers, use stable manifest placeholders such as `${PLUGIN_ROOT}` and `${PLUGIN_DATA}` instead of installed runtime paths.
-8. For MCP Apps, keep tool metadata and resource metadata separate: tool `_meta.ui` carries `resourceUri` / `visibility`; resource `_meta.ui` carries CSP, permissions, `domain`, and `prefersBorder`.
+8. For MCP Apps, keep tool metadata and resource metadata separate: tool `_meta.ui` carries `resourceUri` / `visibility`; resource `_meta.ui` carries display metadata (`title`, `description`, `icon`) plus CSP, permissions, `domain`, and `prefersBorder`.
 9. Treat plugin-managed stdio MCP servers as platform-controlled runtimes: production must be explicitly enabled, commands must be policy-checked, mutable state belongs in `${PLUGIN_DATA}`, and MCP App resource/RPC requests must carry the host-issued `appInstanceToken`.
 10. Style MCP Apps with host-injected CSS variables using the public `--mcp-app-*` contract. Do not hardcode ChatKit internals, private theme tokens, or tenant-specific colors in iframe HTML.
+11. Localize MCP App iframe UI from the host `ui/initialize` language context instead of hardcoding one language in app HTML.
 
 ## Output expectations
 
