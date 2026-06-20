@@ -1,15 +1,17 @@
 ---
 name: xpert-agentic-app-developer
-description: Develop custom Agentic Apps on the Xpert platform as independent plugins. Use when Codex needs to design, implement, review, or document an Xpert business plugin that exposes Agent middleware tools, server modules, data models, Workbench views, remote components, Assistant templates, targetAppMeta capabilities, local plugin registration, or production plugin packaging.
+description: Develop custom Agentic Apps on the Xpert platform as independent plugins, with a primary focus on extension views, Workbench views, remote components, Agent middleware tools, server modules, data models, Assistant templates, targetAppMeta capabilities, local plugin registration, and production plugin packaging.
 ---
 
 # Xpert Agentic App Developer
 
 ## Overview
 
-Use this skill to build an Xpert Agentic App as a production plugin, not as a loose prompt or a few attached tools. Treat the app as a closed loop: plugin metadata, server module, Agent middleware tools, persistence, Workbench review UI, Assistant template, installation, and tests.
+Use this skill to build an Xpert Agentic App as a production plugin, not as a loose prompt or a few attached tools. Treat the app as a closed loop: plugin metadata, server module, Agent middleware tools, persistence, Workbench or extension view UI, Assistant template, installation, and tests.
 
 Do not confuse **Agent middleware tools** with workflow **Agent Tool** nodes. In this workflow, "tools" means callable tools returned by Agent middleware to the agent runtime.
+
+The primary UI path for this skill is an Xpert extension view: a Workbench view manifest plus a remote component or platform-rendered view. If a task is primarily about plugin-managed MCP tools or MCP Apps, use the dedicated Xpert plugin development MCP guidance instead; this skill only mentions that path as an optional integration surface.
 
 ## Development Workflow
 
@@ -19,7 +21,7 @@ Do not confuse **Agent middleware tools** with workflow **Agent Tool** nodes. In
 4. Register the server module, entities, services, middleware, and view provider.
 5. Expose business actions as Agent middleware tools with strict schemas and call order.
 6. Persist reviewable business data with evidence, confidence, status, and failure state.
-7. Add a Workbench view for human review and operational actions.
+7. Add a Workbench or extension view for human review and operational actions.
 8. Provide an Assistant template so users can create the business assistant in one step.
 9. Build and register the plugin from an independent plugin repository.
 10. Validate with unit, integration, manifest, and end-to-end tests.
@@ -31,8 +33,9 @@ An Agentic App should usually include:
 - **Business plugin**: `XpertPlugin` metadata, config schema, target apps, capabilities, templates, lifecycle.
 - **Agent middleware tools**: zod schemas, tool descriptions, ordered tool calls, per-item persistence, failure reporting.
 - **Services and data models**: domain entities, review state, source evidence, confidence, audit-friendly outputs.
-- **Workbench view**: view manifest, actions, data queries, host event subscriptions, optional remote component UI.
+- **Workbench or extension view**: view manifest, actions, data queries, host event subscriptions, optional remote component UI.
 - **Assistant template**: DSL content, required plugins, capabilities, model options, starter prompts.
+- **Optional MCP surface**: only when explicitly requested, expose standard MCP tools or MCP Apps through plugin-managed MCP servers; keep detailed MCP implementation guidance outside this skill.
 
 ## Independent Plugin Repository
 
@@ -152,6 +155,17 @@ const saveContractHeaderTool = tool(
 )
 ```
 
+## Optional MCP Tools and MCP Apps
+
+This skill is not the primary guide for plugin-managed MCP tools or MCP Apps. When the user explicitly asks for MCP tools, MCP Apps, `.xpertai-plugin/plugin.json` `mcpServers`, `ui://` resources, or ChatKit inline MCP App rendering, switch to the dedicated plugin development guidance for that surface.
+
+Keep the boundary clear:
+
+- Use this skill for Xpert-native Agentic Apps built around server modules, Agent middleware tools, Workbench extension views, remote components, Assistant templates, and persisted business state.
+- Use plugin-managed MCP tools when the callable surface must be standard MCP and installed as a Toolset resource.
+- Use MCP Apps only for inline interactive HTML returned by MCP tool calls; do not substitute MCP Apps for persistent Workbench or integration pages.
+- If an Agentic App also exposes MCP tools, keep the MCP server packaging and bridge details isolated from the extension view implementation.
+
 ## Workbench View
 
 Add a Workbench view when users must review, correct, approve, reject, upload files, or submit results. Use a remote component iframe when the UI needs custom interaction beyond declarative tables and forms.
@@ -216,8 +230,7 @@ Security and integration rules:
 - Route iframe data and actions through the platform bridge and view-host.
 - Declare every backend interaction in the manifest before the remote component uses it.
 - Use file actions for uploads and JSON actions for normal commands.
-- For table views, declare pagination/search support in `querySchema`, and keep backend list endpoints tenant/organization scoped before filtering and paginating.- Remote component iframes are sandboxed and may not include `allow-modals`; do not rely on `window.confirm`, `window.alert`, or `window.prompt`. Implement destructive-action confirmation with inline UI state, a small confirmation panel, or a host/view action flow instead.
-
+- For table views, declare pagination/search support in `querySchema`, and keep backend list endpoints tenant/organization scoped before filtering and paginating.
 
 ## Tool Completion Events
 
@@ -275,6 +288,8 @@ After changes, rebuild the independent plugin package and reinstall or reload it
 
 When developing against a local Xpert runtime, rebuilding the source package may not update the already installed runtime copy. Locate the installed plugin under the host plugin directory and sync or reinstall the built `dist`, remote component assets, scripts, package metadata, and docs before testing the UI. Re-run the plugin build after TSX changes so generated `app.js` matches source.
 
+If the plugin also has an explicitly requested MCP surface, validate that surface with the dedicated Xpert plugin development MCP guidance; keep that validation separate from the Workbench extension view flow.
+
 ## Documentation Guidance
 
 When writing user-facing docs for this workflow:
@@ -283,6 +298,7 @@ When writing user-facing docs for this workflow:
 - Link platform features such as plugin development, custom middleware, Workbench, ChatKit, remote components, Assistant configuration, and plugin installation.
 - Say "Agent middleware tools" when referring to tools exposed by middleware.
 - Avoid linking these middleware tools to workflow Agent Tool node documentation unless the text is actually about workflow nodes.
+- If MCP tools or MCP Apps are explicitly part of the request, link to the dedicated plugin development MCP guidance instead of expanding that protocol detail in this skill.
 - Keep docs bilingual only when requested; otherwise follow the target documentation locale.
 
 ## Validation Checklist
@@ -298,6 +314,6 @@ Before finishing, verify:
 - Workbench manifest declares data source, actions, file actions, host events, and remote component entry when used.
 - Remote component table views use scalar query parameters, remote pagination, per-tab filters, and total/page/pageSize metadata instead of fetching all rows into the iframe.
 - View icons use `IconDefinition` object form where supported, with any SDK compatibility cast scoped to the icon field only.
-- Remote component UI avoids browser modal APIs such as `window.confirm`, `window.alert`, and `window.prompt`; sandbox-safe confirmations are implemented inline.
 - Assistant template includes required plugins/capabilities and practical starter prompts.
 - Tests cover service behavior, middleware tool calls, manifest/view actions, remote component bridge behavior, and end-to-end user flow.
+- Optional MCP surfaces, when explicitly requested, are validated separately with the dedicated plugin development MCP checklist.
