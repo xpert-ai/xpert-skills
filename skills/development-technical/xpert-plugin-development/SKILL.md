@@ -44,6 +44,7 @@ Repository:
 9. Treat plugin-managed stdio MCP servers as platform-controlled runtimes: production must be explicitly enabled, commands must be policy-checked, mutable state belongs in `${PLUGIN_DATA}`, and MCP App resource/RPC requests must carry the host-issued `appInstanceToken`.
 10. Style MCP Apps with host-injected CSS variables using the public `--mcp-app-*` contract. Do not hardcode ChatKit internals, private theme tokens, or tenant-specific colors in iframe HTML.
 11. Localize MCP App iframe UI from the host `ui/initialize` language context instead of hardcoding one language in app HTML.
+12. Do not use broad TypeScript escape hatches as normal implementation strategy: avoid `as any`, `as unknown as`, `: any`, `: unknown`, `Record<string, any>`, untyped callbacks, and untyped test mocks. First inspect the SDK, platform, React, MCP, or domain-library types; import concrete types, derive callback/event shapes with `Parameters<>` / `ReturnType<>`, add narrow type guards, or define small boundary DTOs. If a compatibility assertion is unavoidable, isolate it in a named helper at the boundary and keep downstream code typed.
 
 ## Output expectations
 

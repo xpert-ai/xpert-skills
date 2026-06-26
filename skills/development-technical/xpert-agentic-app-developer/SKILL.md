@@ -37,6 +37,10 @@ An Agentic App should usually include:
 - **Assistant template**: DSL content, required plugins, capabilities, model options, starter prompts.
 - **Optional MCP surface**: only when explicitly requested, expose standard MCP tools or MCP Apps through plugin-managed MCP servers; keep detailed MCP implementation guidance outside this skill.
 
+## Type Boundary Hygiene
+
+When TypeScript code shows `any` or `unknown` around plugin, SDK, React, remote bridge, or domain-library boundaries, inspect the real upstream types before editing. Avoid normalizing patterns such as `as any`, `as unknown as`, `: any`, `: unknown`, `Record<string, any>`, broad callback parameters, or untyped mocks. Prefer importing the concrete type, deriving callback/event types with `Parameters<>` / `ReturnType<>`, writing narrow type guards, or defining a small boundary DTO such as a JSON payload type. Keep unavoidable compatibility assertions local to the integration boundary through a named helper, and do not let the assertion flow into application logic.
+
 ## Independent Plugin Repository
 
 Develop production business plugins in an independent plugin repository, commonly with a workspace layout similar to `xpert-plugins`. The host Xpert app should load, validate, and run the plugin; avoid developing production plugin code directly inside the host application repository.
@@ -171,6 +175,8 @@ Keep the boundary clear:
 Add a Workbench view when users must review, correct, approve, reject, upload files, or submit results. Use a remote component iframe when the UI needs custom interaction beyond declarative tables and forms.
 
 For React remote component views, prefer TSX as the default development mode. Implement the view as maintainable React TypeScript source, preferably `remote-components/<entry>/src/main.tsx` plus supporting `*.ts`/`*.tsx` files, and generate the iframe entry `app.js` through a repeatable build step such as esbuild. Do not hand-maintain a large `React.createElement` `app.js` as the source of truth unless the user explicitly asks for a no-build static script or the existing plugin already has a deliberate no-build convention. Keep the generated `app.js` only as the runtime artifact read by `renderRemoteReactIframeHtml`, and wire `build`, `typecheck` or an equivalent check so stale generated output is caught.
+
+For React project and remote component development, especially when React is supplied by the host iframe runtime or when TypeScript hover/types appear as `any`, read `references/react-project-development.md` before editing.
 
 For React view components, keep user-facing static text in a small i18n dictionary or the host platform i18n mechanism instead of hardcoding strings directly in JSX. Resolve text from the remote component host locale when available, provide at least the product's primary locale and English for reusable plugins, and leave backend audit/status values raw unless there is an explicit display mapping.
 
@@ -314,6 +320,7 @@ Before finishing, verify:
 - Workbench manifest declares data source, actions, file actions, host events, and remote component entry when used.
 - Remote component table views use scalar query parameters, remote pagination, per-tab filters, and total/page/pageSize metadata instead of fetching all rows into the iframe.
 - View icons use `IconDefinition` object form where supported, with any SDK compatibility cast scoped to the icon field only.
+- Source and test code do not use broad type escape hatches (`as any`, `as unknown as`, `: any`, `: unknown`) except for a deliberately isolated compatibility helper; concrete library, SDK, bridge, and mock types are used instead.
 - Assistant template includes required plugins/capabilities and practical starter prompts.
 - Tests cover service behavior, middleware tool calls, manifest/view actions, remote component bridge behavior, and end-to-end user flow.
 - Optional MCP surfaces, when explicitly requested, are validated separately with the dedicated plugin development MCP checklist.

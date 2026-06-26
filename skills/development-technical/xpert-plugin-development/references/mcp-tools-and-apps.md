@@ -416,6 +416,8 @@ At minimum, app HTML should:
 8. Localize iframe UI from `ui/initialize.hostContext.locale`, `hostContext.language`, and `hostContext.direction`; ChatKit also sets the HTML `lang` and `dir` attributes before the app runs.
 9. Avoid direct API calls to the Xpert backend.
 
+ChatKit uses live app instance data first when sending initial tool results. Chat history only stores a size-limited standardized `CallToolResult` snapshot; oversized results are marked as truncated instead of being inlined into message content. Apps must tolerate missing initial `tool-result` notifications for old history items or oversized results, then show a fallback, offer a rerun, or load data through app-visible tools with pagination/drilldown.
+
 ## ChatKit Theme Variables
 
 The host injects theme variables into the MCP App iframe before app JavaScript runs. Use the public `--mcp-app-*` variables in `src/app/styles.css` and read them from `getComputedStyle(document.documentElement)` when a chart or editor library needs JavaScript colors. The prefix is intentionally host-neutral so ChatKit and other MCP Apps clients can share the same contract.
