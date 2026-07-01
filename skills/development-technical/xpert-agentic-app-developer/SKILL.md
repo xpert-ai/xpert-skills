@@ -41,6 +41,49 @@ An Agentic App should usually include:
 
 When TypeScript code shows `any` or `unknown` around plugin, SDK, React, remote bridge, or domain-library boundaries, inspect the real upstream types before editing. Avoid normalizing patterns such as `as any`, `as unknown as`, `: any`, `: unknown`, `Record<string, any>`, broad callback parameters, or untyped mocks. Prefer importing the concrete type, deriving callback/event types with `Parameters<>` / `ReturnType<>`, writing narrow type guards, or defining a small boundary DTO such as a JSON payload type. Keep unavoidable compatibility assertions local to the integration boundary through a named helper, and do not let the assertion flow into application logic.
 
+## Debug Logging Standard
+
+Every Agentic App with middleware tools, host events, or a remote component should include a switchable debug logger before deep debugging. Do not rely on ad hoc `console.info` statements. Detailed logs must be off by default in production and easy to enable during local development. For remote components, the host renderer should derive the default debug state from the Cloud `environment.production` value and pass it in the iframe `init` message, for example `{ debug: { enabled: !environment.production, production: environment.production } }`; the iframe should consume that value as its default and should not infer development mode from `localhost`, hostname, API URL, tenant, organization, or token-like values.
+
+Use a small shared logger per plugin surface:
+
+```ts
+type DebugLevel = 'debug' | 'info' | 'warn' | 'error'
+
+export function createPluginDebugLogger(namespace: string) {
+  const key = `xpert.debug.${namespace}`
+  const enabled = () =>
+    globalThis.localStorage?.getItem(key) === '1' ||
+    new URLSearchParams(globalThis.location?.search || '').get('xpertDebug') === namespace
+
+  return {
+    debug(event: string, data?: object) {
+      if (enabled()) console.debug(`[${namespace}] ${event}`, redactDebugData(data))
+    },
+    info(event: string, data?: object) {
+      if (enabled()) console.info(`[${namespace}] ${event}`, redactDebugData(data))
+    },
+    warn(event: string, data?: object) {
+      console.warn(`[${namespace}] ${event}`, redactDebugData(data))
+    },
+    error(event: string, data?: object) {
+      console.error(`[${namespace}] ${event}`, redactDebugData(data))
+    }
+  }
+}
+```
+
+Keep this logger tiny and typed. Implement `redactDebugData` beside the logger to remove secrets and summarize large values before printing. Enable logging explicitly with `localStorage.setItem('xpert.debug.<entry>', '1')` or `?xpertDebug=<entry>`; support a `localStorage` value of `0` as a force-off override even when the host default enables debug. If server-side debug is needed, gate it through plugin config or an explicit environment flag, never through user-provided request data.
+
+Log only useful checkpoints:
+
+- Middleware: tool name, tool call id, compact input summary, target business id, success/failure, duration.
+- Host event bus: event id, event type, source, tool name, target business id, subscription key.
+- Remote bridge: init, host event received, event normalization result, requestData/action request id, response summary.
+- Remote component state: selected business id, dirty state, refresh decision, diff counts, applied/skipped reason.
+
+Never log tokens, credentials, raw file buffers, base64/data URLs, tenant ids, organization ids, full snapshots, full tool outputs, or personally sensitive content. Redact or summarize large payloads before printing. Production builds may keep `warn` and `error`, but debug/info must stay gated.
+
 ## Independent Plugin Repository
 
 Develop production business plugins in an independent plugin repository, commonly with a workspace layout similar to `xpert-plugins`. The host Xpert app should load, validate, and run the plugin; avoid developing production plugin code directly inside the host application repository.
@@ -262,6 +305,26 @@ hostEvents: {
 ```
 
 Use `refresh` for simple declarative views. Use `forward` for remote components so the iframe can switch tabs, update query parameters, or refresh only affected panels.
+
+For remote components, implement the event path as a closed protocol, not a best-effort side effect:
+
+1. Middleware mutation tools must return a compact result that includes the mutated business id whenever possible, such as `documentId`, `drawingId`, `recordId`, `versionId`, and a human `message`.
+2. The host event publisher must preserve a compact `data.input` and `data.output` summary when forwarding ChatKit tool logs. It may redact host ids before iframe delivery, but it should not drop the target business id.
+3. The view manifest must declare `hostEvents.subscriptions` with stable `key`, exact `event`, `sources`, and `toolNames`. Use `action.type: 'forward'` for remote components and a small debounce only for duplicate bursts.
+4. The remote bridge must forward the normalized event to the iframe and tolerate common envelope shapes: `event`, `payload`, `data`, `result`, and the whole message as fallback.
+5. The remote component must normalize tool events in one tested helper. Read tool name from top-level fields, `payload/data`, `toolCall/tool_call`, `function`, `content`, and JSON string previews. Read target ids from top-level fields, `input`, `args`, `target`, `output/result`, `document/item`, and truncated `argsPreview` when possible.
+6. The remote component must keep current selection, current business id, editor instance, dirty flag, and `loadData`/refresh callbacks in refs used by the host event handler. Do not let a `useEffect([])` event listener call a stale render closure.
+7. The event handler must log, when debug is enabled, `received -> normalized -> target resolved -> request started -> response received -> state applied/skipped`.
+8. Refresh behavior must match the mutation: update lists and metadata, then apply only the affected remote state. For canvas-like editors, use the domain library's remote-change API such as `store.mergeRemoteChanges`; avoid remounting the whole editor for autosave or tool insertions unless the document id changed.
+9. Protect local edits deliberately. If the current scene is dirty and the event targets the same document, either merge safely, defer with a visible warning, or force an autosave first. Do not silently discard local changes.
+
+Add tests for the whole event contract:
+
+- Host event conversion from ChatKit logs includes tool name and target id.
+- Renderer forwards the event to the iframe and preserves `data.input` / `data.output` summaries.
+- Remote event parser handles direct, nested, `toolCall`, `content`, and truncated `argsPreview` shapes.
+- Remote host event handler uses the latest refs, resolves the correct target id, calls `requestData`, and applies or skips state with an explicit reason.
+- Generated remote component output is checked so the runtime `app.js` cannot drift from TSX source.
 
 ## Assistant Template
 

@@ -27,9 +27,10 @@ Repository:
 3. Read `references/general.md` for repository layout, install flow, test flow, versioning, and PR rules.
 4. If the task is about model providers, yaml, assets, or packaging, also read `references/model-plugins.md`.
 5. If the task is about callbacks, bindings, notifications, or third-party platform connectivity, also read `references/integration-middleware.md`.
-6. If the task is about `.xpertai-plugin/plugin.json`, plugin-managed MCP servers, MCP tool metadata, `ui://` resources, MCP Apps, or ChatKit inline app rendering, also read `references/mcp-tools-and-apps.md`.
-7. Prefer local installation via `source=code + workspacePath` during development.
-8. Before finishing, verify build output, installation, runtime behavior, and submit only relevant files.
+6. If the task is about plugin background jobs, BullMQ, delayed/retry jobs, Redis queue state, or multi-tenant queue isolation, also read `references/managed-queue.md`.
+7. If the task is about `.xpertai-plugin/plugin.json`, plugin-managed MCP servers, MCP tool metadata, `ui://` resources, MCP Apps, or ChatKit inline app rendering, also read `references/mcp-tools-and-apps.md`.
+8. Prefer local installation via `source=code + workspacePath` during development.
+9. Before finishing, verify build output, installation, runtime behavior, and submit only relevant files.
 
 ## Rules
 
@@ -45,6 +46,7 @@ Repository:
 10. Style MCP Apps with host-injected CSS variables using the public `--mcp-app-*` contract. Do not hardcode ChatKit internals, private theme tokens, or tenant-specific colors in iframe HTML.
 11. Localize MCP App iframe UI from the host `ui/initialize` language context instead of hardcoding one language in app HTML.
 12. Do not use broad TypeScript escape hatches as normal implementation strategy: avoid `as any`, `as unknown as`, `: any`, `: unknown`, `Record<string, any>`, untyped callbacks, and untyped test mocks. First inspect the SDK, platform, React, MCP, or domain-library types; import concrete types, derive callback/event shapes with `Parameters<>` / `ReturnType<>`, add narrow type guards, or define small boundary DTOs. If a compatibility assertion is unavoidable, isolate it in a named helper at the boundary and keep downstream code typed.
+13. For new plugin background jobs, use the platform Managed Queue abstraction instead of plugin-owned BullMQ queues or Redis connections.
 
 ## Output expectations
 
