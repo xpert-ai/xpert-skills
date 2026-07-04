@@ -1,6 +1,6 @@
 ---
 name: xpert-plugin-development
-description: Guidance for developing, installing, testing, versioning, and submitting Xpert plugins. Use this skill when working in xpert-plugins on general plugins, model plugins, integrations, middlewares, plugin-managed MCP tools, or MCP Apps.
+description: Guidance for developing, installing, testing, versioning, and submitting Xpert plugins. Use this skill when working in xpert-plugins on general plugins, model plugins, skill-only plugins, integrations, middlewares, plugin-managed MCP tools, or MCP Apps.
 ---
 
 # Xpert Plugin Development
@@ -22,15 +22,16 @@ Repository:
 
 ## Workflow
 
-1. Identify the plugin type first: general tool plugin, model plugin, integration plugin, middleware plugin, plugin-managed MCP server, or MCP App plugin.
+1. Identify the plugin type first: general tool plugin, model plugin, integration plugin, middleware plugin, skill-only plugin, plugin-managed MCP server, or MCP App plugin.
 2. Discover the actual local paths for the plugin repository, the target plugin directory, and the platform backend before running commands.
 3. Read `references/general.md` for repository layout, install flow, test flow, versioning, and PR rules.
 4. If the task is about model providers, yaml, assets, or packaging, also read `references/model-plugins.md`.
 5. If the task is about callbacks, bindings, notifications, or third-party platform connectivity, also read `references/integration-middleware.md`.
 6. If the task is about plugin background jobs, BullMQ, delayed/retry jobs, Redis queue state, or multi-tenant queue isolation, also read `references/managed-queue.md`.
 7. If the task is about `.xpertai-plugin/plugin.json`, plugin-managed MCP servers, MCP tool metadata, `ui://` resources, MCP Apps, or ChatKit inline app rendering, also read `references/mcp-tools-and-apps.md`.
-8. Prefer local installation via `source=code + workspacePath` during development.
-9. Before finishing, verify build output, installation, runtime behavior, and submit only relevant files.
+8. If the task is about Xpert skill-only plugins, Codex-to-Xpert skill conversion, skill marketplace cards, skill resource installation, skill document dialogs, or ClawXpert skill trial flows, also read `references/skill-only-plugins.md`.
+9. Prefer local installation via `source=code + workspacePath` during development.
+10. Before finishing, verify build output, installation, runtime behavior, and submit only relevant files.
 
 ## Rules
 
