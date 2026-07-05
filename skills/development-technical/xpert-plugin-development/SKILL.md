@@ -28,10 +28,11 @@ Repository:
 4. If the task is about model providers, yaml, assets, or packaging, also read `references/model-plugins.md`.
 5. If the task is about callbacks, bindings, notifications, or third-party platform connectivity, also read `references/integration-middleware.md`.
 6. If the task is about plugin background jobs, BullMQ, delayed/retry jobs, Redis queue state, or multi-tenant queue isolation, also read `references/managed-queue.md`.
-7. If the task is about `.xpertai-plugin/plugin.json`, plugin-managed MCP servers, MCP tool metadata, `ui://` resources, MCP Apps, or ChatKit inline app rendering, also read `references/mcp-tools-and-apps.md`.
-8. If the task is about Xpert skill-only plugins, Codex-to-Xpert skill conversion, skill marketplace cards, skill resource installation, skill document dialogs, or ClawXpert skill trial flows, also read `references/skill-only-plugins.md`.
-9. Prefer local installation via `source=code + workspacePath` during development.
-10. Before finishing, verify build output, installation, runtime behavior, and submit only relevant files.
+7. If the task is about plugin file inputs, workspace files, sandbox `/workspace` paths, file upload/download/send flows, platform file references, or queued file retries, also read `references/workspace-files.md`.
+8. If the task is about `.xpertai-plugin/plugin.json`, plugin-managed MCP servers, MCP tool metadata, `ui://` resources, MCP Apps, or ChatKit inline app rendering, also read `references/mcp-tools-and-apps.md`.
+9. If the task is about Xpert skill-only plugins, Codex-to-Xpert skill conversion, skill marketplace cards, skill resource installation, skill document dialogs, or ClawXpert skill trial flows, also read `references/skill-only-plugins.md`.
+10. Prefer local installation via `source=code + workspacePath` during development.
+11. Before finishing, verify build output, installation, runtime behavior, and submit only relevant files.
 
 ## Rules
 
