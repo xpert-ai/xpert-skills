@@ -10,12 +10,13 @@ Use `platform.collaboration` when a plugin needs users, Agents, or system jobs t
 4. [Use the server runtime capability](#use-the-server-runtime-capability)
 5. [Create a browser collaboration session](#create-a-browser-collaboration-session)
 6. [Connect a browser client](#connect-a-browser-client)
-7. [Publish presence](#publish-presence)
-8. [Represent Agent operations](#represent-agent-operations)
-9. [Handle materialization and strong reads](#handle-materialization-and-strong-reads)
-10. [Archive and delete documents](#archive-and-delete-documents)
-11. [Security rules](#security-rules)
-12. [Testing checklist](#testing-checklist)
+7. [Project presence into the UI](#project-presence-into-the-ui)
+8. [Publish presence](#publish-presence)
+9. [Represent Agent operations](#represent-agent-operations)
+10. [Handle materialization and strong reads](#handle-materialization-and-strong-reads)
+11. [Archive and delete documents](#archive-and-delete-documents)
+12. [Security rules](#security-rules)
+13. [Testing checklist](#testing-checklist)
 
 ## Responsibility boundary
 
@@ -260,6 +261,7 @@ import { io } from 'socket.io-client'
 import * as Y from 'yjs'
 import {
   createCollaborationClient,
+  createCollaborationPresenceStore,
   createSocketIoTransportAdapter,
   createYjsDocumentAdapter
 } from '@xpert-ai/plugin-sdk'
@@ -272,6 +274,14 @@ const socket = io(session.connectionUrl, {
     sessionId: session.sessionId,
     clientKey: session.clientKey,
     documentId: session.documentId
+  }
+})
+
+const presenceStore = createCollaborationPresenceStore({
+  selfActor: session.actor,
+  onChange: ({ collaborators, remoteSessions }) => {
+    setCollaborators(collaborators)
+    renderRemotePresence(remoteSessions)
   }
 })
 
@@ -288,9 +298,9 @@ const client = createCollaborationClient({
   syncIntervalMs: 2_000,
   presenceHeartbeatMs: 5_000,
   onAck: (ack) => setRevision(ack.sequenceNumber),
-  onPresence: upsertCollaborator,
-  onPresenceSnapshot: replaceCollaborators,
-  onPresenceRemove: removeCollaborator,
+  onPresence: presenceStore.upsert,
+  onPresenceSnapshot: (items, { selfClientId }) => presenceStore.replace(items, selfClientId),
+  onPresenceRemove: presenceStore.remove,
   onConnectionChange: setConnectionState,
   onError: reportCollaborationError
 })
@@ -301,6 +311,33 @@ client.connect()
 Call `client.disconnect()` when switching resources or unmounting the view. The client removes listeners and timers and makes a best-effort flush of queued local updates.
 
 The SDK uses a stable `client.remoteOrigin` for server-applied updates. If plugin observers perform side effects, ignore this origin to avoid echoing remote work back to the server.
+
+Clear both the client and its presence projection when switching resources or unmounting:
+
+```ts
+client.disconnect()
+presenceStore.clear()
+```
+
+## Project presence into the UI
+
+Treat actor identity and connection identity as different concepts:
+
+- `presenceId` is a stable, opaque identity for one user, Agent, or system actor.
+- `clientId` identifies one browser tab, device, or virtual presence session.
+- `selfClientId` identifies the exact Socket connection owned by the current client. It can change after reconnecting.
+
+Use the presence store snapshot according to the rendering purpose:
+
+| Projection | Use it for | Identity rule |
+| --- | --- | --- |
+| `collaborators` | Avatar group and collaborator count | Deduplicate by `presenceId`; include `session.actor` even when alone. |
+| `remoteSessions` | Cursors, selections, focus rings, and canvas badges | Exclude only `selfClientId`; preserve another tab owned by the same actor. |
+| `sessions` | Diagnostics or session-level indicators | Keep every active `clientId`. |
+
+Never implement remote presence as `items.filter((item) => item.presenceId !== session.actor.presenceId)`. That removes every other tab owned by the current user and can make the collaborator UI disappear. Do not cache the first Socket id as permanent identity; pass the `selfClientId` delivered with every presence snapshot to `presenceStore.replace`.
+
+The platform stores each client presence with an independent TTL. The SDK also removes silent remote sessions locally when their refreshes stop, covering a lost `presence-remove` event. Keep the avatar group visible when only the local actor is present, and use responsive sizing or overflow rather than hiding the entire group on narrow workbenches.
 
 ## Publish presence
 
@@ -426,6 +463,12 @@ Test at least:
 - An expired or invalid session cannot connect.
 - Reconnect restores missed updates.
 - Presence heartbeat, snapshot, removal, and expiry work.
+- The initial presence snapshot reports the exact `selfClientId`, and reconnect updates it.
+- The collaborator list includes the local actor when no remote session exists.
+- Two tabs owned by the same user produce one collaborator and one remote session per opposite tab.
+- Different users are deduplicated by actor while their cursor sessions remain independent.
+- A silent remote session is removed locally even when `presence-remove` is lost.
+- Narrow Workbench layouts keep the collaborator control visible and usable.
 - User, Agent, and system presence coexist.
 - Agent focus renders without a fabricated pointer.
 - Materialization failure retries and catches up to the latest sequence.
@@ -434,4 +477,3 @@ Test at least:
 - Backend restart and plugin reinstall preserve existing collaborative documents.
 
 For cluster validation, run two API nodes against the same database and Redis. Verify update and presence propagation through pub/sub, then temporarily interrupt Redis and confirm periodic state-vector synchronization restores convergence.
-
