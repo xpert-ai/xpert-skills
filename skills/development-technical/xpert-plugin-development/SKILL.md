@@ -1,6 +1,6 @@
 ---
 name: xpert-plugin-development
-description: Guidance for developing, installing, testing, versioning, and submitting Xpert plugins. Use this skill when working in xpert-plugins on general plugins, model plugins, skill-only plugins, integrations, middlewares, plugin-managed MCP tools, or MCP Apps.
+description: Guidance for developing, installing, testing, versioning, and submitting Xpert plugins. Use this skill when working in xpert-plugins on general plugins, model plugins, skill-only plugins, integrations, middlewares, plugin-managed MCP tools, MCP Apps, or platform runtime capabilities such as Workspace Files, Managed Queue, and Artifacts.
 ---
 
 # Xpert Plugin Development
@@ -29,10 +29,11 @@ Repository:
 5. If the task is about callbacks, bindings, notifications, or third-party platform connectivity, also read `references/integration-middleware.md`.
 6. If the task is about plugin background jobs, BullMQ, delayed/retry jobs, Redis queue state, or multi-tenant queue isolation, also read `references/managed-queue.md`.
 7. If the task is about plugin file inputs, workspace files, sandbox `/workspace` paths, file upload/download/send flows, platform file references, or queued file retries, also read `references/workspace-files.md`.
-8. If the task is about `.xpertai-plugin/plugin.json`, plugin-managed MCP servers, MCP tool metadata, `ui://` resources, MCP Apps, or ChatKit inline app rendering, also read `references/mcp-tools-and-apps.md`.
-9. If the task is about Xpert skill-only plugins, Codex-to-Xpert skill conversion, skill marketplace cards, skill resource installation, skill document dialogs, or ClawXpert skill trial flows, also read `references/skill-only-plugins.md`.
-10. Prefer local installation via `source=code + workspacePath` during development.
-11. Before finishing, verify build output, installation, runtime behavior, and submit only relevant files.
+8. If the task is about creating, versioning, previewing, sharing, revoking, archiving, or deleting platform-managed Artifacts, read `references/artifacts.md`; also read `references/workspace-files.md` when Artifact content is written or deleted.
+9. If the task is about `.xpertai-plugin/plugin.json`, plugin-managed MCP servers, MCP tool metadata, `ui://` resources, MCP Apps, or ChatKit inline app rendering, also read `references/mcp-tools-and-apps.md`.
+10. If the task is about Xpert skill-only plugins, Codex-to-Xpert skill conversion, skill marketplace cards, skill resource installation, skill document dialogs, or ClawXpert skill trial flows, also read `references/skill-only-plugins.md`.
+11. Prefer local installation via `source=code + workspacePath` during development.
+12. Before finishing, verify build output, installation, runtime behavior, and submit only relevant files.
 
 ## Rules
 
