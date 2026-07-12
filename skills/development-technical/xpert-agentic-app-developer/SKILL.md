@@ -180,6 +180,9 @@ Tool design rules:
 - Include required `technicalAttributes` / `differences` arrays, or domain equivalents, even when empty.
 - Require source evidence for important extracted values.
 - Provide a failure-reporting tool for unreadable files or incomplete parsing.
+- Return compact operation DTOs by default: business id, revision/status, a human message, changed ids/counts, blocking diagnostics, and the next recovery action. Never return a full document, scene, IR, binary payload, or complete history from a mutation or validation tool. Expose full content only through an explicit paged/item-level read tool.
+- Give every user-visible mutation schema a bounded `changeSummary`. When it is present, middleware `wrapToolCall` must publish `ON_TOOL_MESSAGE` events for `running`, `success`, and `fail`; use the exact summary as both the step `title` and `message`, and keep the stable tool name in the event `tool` field. Event publication failure must not fail the business operation.
+- Await every asynchronous service call before serializing the tool result. Never pass a live Promise to `JSON.stringify` or detach a rejecting Promise from the tool invocation.
 
 Example:
 
