@@ -222,6 +222,14 @@ Add a Workbench view when users must review, correct, approve, reject, upload fi
 
 For React remote component views, prefer TSX as the default development mode. Implement the view as maintainable React TypeScript source, preferably `remote-components/<entry>/src/main.tsx` plus supporting `*.ts`/`*.tsx` files, and generate the iframe entry `app.js` through a repeatable build step such as esbuild. Do not hand-maintain a large `React.createElement` `app.js` as the source of truth unless the user explicitly asks for a no-build static script or the existing plugin already has a deliberate no-build convention. Keep the generated `app.js` only as the runtime artifact read by `renderRemoteReactIframeHtml`, and wire `build`, `typecheck` or an equivalent check so stale generated output is caught.
 
+### Confirmation Dialog Standard
+
+Treat confirmation as a dedicated interaction pattern for consequential, destructive, security-sensitive, or irreversible actions. Do not use browser-native dialogs or a generic content modal as a confirmation substitute. Reserve ordinary dialogs for forms, details, previews, and other non-confirmation content.
+
+Provide an explicit title, consequence-focused description, Cancel action, and confirmation action. Visually distinguish destructive actions. Resolve dismiss, Escape, overlay close, and Cancel as cancellation. Execute the protected operation only after explicit confirmation. For asynchronous mutations, prevent duplicate submission, expose pending state, and keep failures recoverable. Keep confirmation copy localized and state-driven.
+
+Audit existing confirmation flows when touching this interaction pattern. Verify that maintained UI source contains no browser-native confirmation calls, rebuild generated remote assets, and exercise both cancel and confirm paths in tests or browser verification. For React implementations using shadcn UI, read [references/shadcn-ui.md](references/shadcn-ui.md) before editing.
+
 For React project and remote component development, especially when React is supplied by the host iframe runtime or when TypeScript hover/types appear as `any`, read `references/react-project-development.md` before editing.
 
 For React view components, keep user-facing static text in a small i18n dictionary or the host platform i18n mechanism instead of hardcoding strings directly in JSX. Resolve text from the remote component host locale when available, provide at least the product's primary locale and English for reusable plugins, and leave backend audit/status values raw unless there is an explicit display mapping.
@@ -384,6 +392,7 @@ Before finishing, verify:
 - Middleware tools have schemas, descriptions, ordered workflow, per-item persistence, and failure reporting.
 - Data model preserves source evidence, confidence, review status, and failure reasons.
 - Workbench manifest declares data source, actions, file actions, host events, and remote component entry when used.
+- Every confirmation uses the designated accessible confirmation primitive; maintained UI source contains no browser-native confirmation calls or generic content-dialog substitutes.
 - Remote component table views use scalar query parameters, remote pagination, per-tab filters, and total/page/pageSize metadata instead of fetching all rows into the iframe.
 - View icons use `IconDefinition` object form where supported, with any SDK compatibility cast scoped to the icon field only.
 - Source and test code do not use broad type escape hatches (`as any`, `as unknown as`, `: any`, `: unknown`) except for a deliberately isolated compatibility helper; concrete library, SDK, bridge, and mock types are used instead.
