@@ -175,6 +175,7 @@ contract_upsert_header
 Tool design rules:
 
 - Use zod schemas and precise field descriptions.
+- Set `verboseParsingErrors: true` on every LangChain structured tool configuration so schema failures include actionable Zod or JSON Schema details that the Agent can use to correct its next call instead of receiving only `Received tool input did not match expected schema`.
 - State call order in tool descriptions.
 - Save long lists one item at a time.
 - Include required `technicalAttributes` / `differences` arrays, or domain equivalents, even when empty.
@@ -200,7 +201,8 @@ const saveContractHeaderTool = tool(
     name: 'contract_upsert_header',
     description:
       'Create or reset the parsed contract header. Call this before saving line items.',
-    schema: contractHeaderSchema
+    schema: contractHeaderSchema,
+    verboseParsingErrors: true
   }
 )
 ```
@@ -389,7 +391,7 @@ Before finishing, verify:
 - SDK dependency is a peer dependency.
 - Server module registers entities, services, middleware, and view providers.
 - All plugin entities include `tenantId` and `organizationId`, write paths populate them, and all data reads/mutations are scoped by tenant/organization whenever context is available.
-- Middleware tools have schemas, descriptions, ordered workflow, per-item persistence, and failure reporting.
+- Middleware tools have schemas, descriptions, ordered workflow, per-item persistence, failure reporting, and `verboseParsingErrors: true` on every structured tool configuration.
 - Data model preserves source evidence, confidence, review status, and failure reasons.
 - Workbench manifest declares data source, actions, file actions, host events, and remote component entry when used.
 - Every confirmation uses the designated accessible confirmation primitive; maintained UI source contains no browser-native confirmation calls or generic content-dialog substitutes.
