@@ -143,6 +143,17 @@ Useful config validation endpoint:
 
 1. `POST /api/xpert-toolset/builtin-provider/:name/instance`
 
+## i18n boundary
+
+Use a deliberate i18n boundary instead of scattering strings:
+
+1. Normalize platform/host locale values into the plugin's supported locale union, for example `zh-Hans | en-US`.
+2. Keep frontend iframe text in a typed dictionary or the host platform i18n mechanism; include action labels, tooltips, confirmation copy, validation messages, empty states, status display labels, and table headers.
+3. Keep backend DTOs language-neutral by default. Return codes such as `status`, `errorCode`, `reason`, and `target`; map them to display text in the frontend.
+4. Localize backend-generated artifacts such as Excel/PDF/Word exports, emails, and explicit toast/view action messages with a normalized locale.
+5. Use platform metadata keys such as `en_US` and `zh_Hans` in manifests, and keep conversion to runtime keys such as `en-US` and `zh-Hans` in one helper.
+6. Do not make Agent tool call correctness depend on localized prose. Tool schemas and tool descriptions should stay stable unless the platform explicitly supports localized tool metadata.
+
 ## Prevent TypeScript tool-schema type explosions
 
 LangChain's `tool()` helper supports Zod v3, Zod v4, and JSON Schema overloads. In a middleware that returns many heterogeneous structured tools, TypeScript can retain every complete schema generic and repeatedly compare the resulting recursive tool types against the plugin SDK array. The symptom is `tsc` exhausting several gigabytes of heap even though the runtime code and emitted JavaScript are small.

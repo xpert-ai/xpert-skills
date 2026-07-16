@@ -59,7 +59,8 @@ Repository:
 18. Reuse the platform Browser Runtime for Chromium-based work. Do not add plugin-owned Browser Dockerfiles or plugin identifiers to platform Runtime Profiles.
 19. Verify Sandbox Action hashes against an extracted, real `npm pack` tarball. Put Action-owned dependencies in a normal directory such as `runtime-modules`, never nested `node_modules`, which npm strips from packed dependencies.
 20. Set `verboseParsingErrors: true` on every LangChain structured tool configuration exposed by a plugin. Keep schemas and field descriptions precise so invalid model-generated arguments return actionable Zod or JSON Schema details instead of only `Received tool input did not match expected schema`.
-21. Treat an unexpectedly multi-gigabyte `tsc` heap requirement as a type-boundary defect, not a build requirement. When a plugin declares many heterogeneous LangChain `tool()` calls, prevent the Zod v3/v4/JSON Schema overloads from propagating complete schema generics into the SDK tool array; follow the narrow-boundary pattern in `references/general.md` and verify the package with the default Node heap.
+21. Implement plugin i18n through explicit locale boundaries. Frontend iframe/MCP App UI must resolve host language into a typed supported locale and render all user-visible static text from a shared dictionary or host i18n mechanism. Backend services should return stable codes and structured DTOs by default, localizing only user-facing artifacts, localized metadata, or explicit display messages with a normalized locale.
+22. Treat an unexpectedly multi-gigabyte `tsc` heap requirement as a type-boundary defect, not a build requirement. When a plugin declares many heterogeneous LangChain `tool()` calls, prevent the Zod v3/v4/JSON Schema overloads from propagating complete schema generics into the SDK tool array; follow the narrow-boundary pattern in `references/general.md` and verify the package with the default Node heap.
 
 ## Output expectations
 
