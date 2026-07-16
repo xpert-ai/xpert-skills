@@ -37,6 +37,7 @@ Repository:
 4. Treat `createTools()` and runtime tool execution as separate contracts and verify both.
 5. When the platform backend code changes, restart the backend before concluding installation or loading is broken.
 6. Do not hardcode machine-specific absolute paths in docs, scripts, or instructions. Use discovered paths or placeholders such as `<plugin-repo-root>` and `<platform-root>`.
+7. Implement plugin i18n through explicit locale boundaries. Frontend iframe/MCP App UI must resolve host language into a typed supported locale and render all user-visible static text from a shared dictionary or host i18n mechanism. Backend services should return stable codes and structured DTOs by default, localizing only user-facing artifacts, localized metadata, or explicit display messages with a normalized locale.
 
 ## Output expectations
 
