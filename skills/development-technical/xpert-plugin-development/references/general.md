@@ -94,7 +94,9 @@ curl -sS -X POST <platform-api-base-url>/api/plugin \
     \"pluginName\":\"$PLUGIN_NAME\",
     \"version\":\"$PLUGIN_LOAD_VERSION\",
     \"source\":\"code\",
-    \"workspacePath\":\"$PLUGIN_PATH\"
+    \"sourceConfig\":{
+      \"workspacePath\":\"$PLUGIN_PATH\"
+    }
   }"
 ```
 
@@ -109,9 +111,73 @@ curl -sS -X POST <platform-api-base-url>/api/plugin/by-names \
   --data "{\"names\":[\"$PLUGIN_NAME\"]}"
 ```
 
+## Automated local deployment
+
+Prefer the platform-owned deployment command when `<platform-root>/package.json` exposes `plugin:deploy:local`:
+
+```bash
+cd <platform-root>
+corepack pnpm plugin:deploy:local \
+  --plugin-dir <plugin-repo-root>/<plugin-relative-path> \
+  --org-id "$XPERT_ORG_ID"
+```
+
+The command must:
+
+1. read the plugin name from `package.json`
+2. run the detected build and test scripts unless explicitly skipped
+3. call `POST /api/plugin/refresh` for an existing local-code registration
+4. fall back to `POST /api/plugin` with `source=code + sourceConfig.workspacePath` only when the plugin is not refreshable
+5. call `POST /api/plugin/by-names` and fail when no descriptor is returned
+6. redact authentication and avoid logging complete plugin configuration
+
+Useful options:
+
+```bash
+# Validate the plan without mutation; credentials are optional in dry-run mode.
+corepack pnpm plugin:deploy:local --plugin-dir <plugin-dir> --org-id <org-id> --dry-run
+
+# Reuse prior validation when the build and tests already passed in the same task.
+corepack pnpm plugin:deploy:local --plugin-dir <plugin-dir> --org-id <org-id> --skip-build --skip-test
+
+# Replace a marketplace or stale registration with a local source-code registration.
+corepack pnpm plugin:deploy:local --plugin-dir <plugin-dir> --org-id <org-id> --force-install
+```
+
+Use `--tenant-id <id> --scope tenant` for tenant scope. Do not guess tenant or organization identifiers; discover them from the local environment or ask the user for the non-secret identifier.
+
+## Authentication and missing-token procedure
+
+Resolve credentials in this order:
+
+1. an explicitly supplied `--token` only when the user intentionally provided it outside chat
+2. `XPERT_TOKEN` in the current process environment
+3. the macOS Keychain item named `xpert-local-plugin-token` for the current OS user
+
+If no token is available:
+
+1. stop before build, installation, or refresh; do not repeatedly call the API
+2. do not inspect browser Local Storage, cookies, network headers, shell history, or unrelated process environments
+3. do not ask the user to paste a token into chat, a command argument, a tracked `.env` file, or a repository file
+4. tell the user to run this command locally, which prompts for the secret without placing it in shell history:
+
+```bash
+security add-generic-password \
+  -a "$USER" \
+  -s xpert-local-plugin-token \
+  -U \
+  -w
+```
+
+5. explain that the final `-w` prompts for the token, then wait for the user to confirm setup before rerunning deployment
+
+On non-macOS systems, ask the user to inject `XPERT_TOKEN` through their approved local secret manager or current process environment. Never create an untracked secret file on the user's behalf unless they explicitly request that storage method.
+
+Treat HTTP `401` as missing, expired, or invalid authentication. Provide the same safe replacement instructions instead of printing the rejected token or attempting to recover a browser session credential.
+
 ## Update workflow
 
-Use this order:
+Use this order when `plugin:deploy:local` is unavailable:
 
 1. modify code
 2. rebuild
@@ -200,7 +266,7 @@ Rules:
 ## Common failures
 
 1. `Cannot find ... dist/index.js`: build output is incomplete
-2. `401 Unauthorized`: token or tenant/org headers are invalid
+2. `401 Unauthorized`: token is missing, expired, or invalid; follow the safe missing-token procedure instead of extracting browser credentials
 3. config save returns `Method not implemented.`: `_validateCredentials()` is missing
 4. provider visible but runtime empty: `createTools()` and runtime tool initialization are inconsistent
 5. code changed but platform behavior is old: stale loading path or backend was not restarted

@@ -1,6 +1,6 @@
 ---
 name: xpert-agentic-app-developer
-description: Develop custom Agentic Apps on the Xpert platform as independent plugins, with a primary focus on extension views, Workbench views, remote components, Agent middleware tools, server modules, data models, Assistant templates, targetAppMeta capabilities, local plugin registration, and production plugin packaging.
+description: Develop custom Agentic Apps on the Xpert platform as independent plugins, with a primary focus on extension views, Workbench views, remote components, Agent middleware tools, server modules, data models, Assistant templates, targetAppMeta capabilities, secure local plugin deployment, and production plugin packaging.
 ---
 
 # Xpert Agentic App Developer
@@ -369,18 +369,30 @@ Template contribution should include:
 Typical development loop:
 
 ```bash
-pnpm install
-pnpm nx build plugin-contract-review
-export PLUGIN_WORKSPACE_ROOTS="/abs/path/to/xpert-plugins"
-pnpm plugin:install:local \
-  --workspace-path /abs/path/to/xpert-plugins/acme/contract-review \
-  --org-id <your-org-id> \
-  --token <your-token>
+cd <plugin-repo-root>
+corepack pnpm install
+
+cd <platform-root>
+corepack pnpm plugin:deploy:local \
+  --plugin-dir <plugin-repo-root>/acme/contract-review \
+  --org-id "$XPERT_ORG_ID"
 ```
 
-After changes, rebuild the independent plugin package and reinstall or reload it. For production, either publish the plugin as an npm/internal artifact and install it through the platform plugin flow, or include it as a platform-owned built-in system plugin when that is truly intended.
+Use `plugin:deploy:local` as the default local lifecycle command when the platform exposes it. It detects the package name, builds and tests the plugin, refreshes an existing local `source=code` registration, falls back to first-time installation with `sourceConfig.workspacePath`, and verifies the loaded descriptor. Use `--skip-build` or `--skip-test` only when those exact validations already passed in the same task.
 
-When developing against a local Xpert runtime, rebuilding the source package may not update the already installed runtime copy. Locate the installed plugin under the host plugin directory and sync or reinstall the built `dist`, remote component assets, scripts, package metadata, and docs before testing the UI. Re-run the plugin build after TSX changes so generated `app.js` matches source.
+Resolve authentication from `XPERT_TOKEN` or the current user's macOS Keychain item named `xpert-local-plugin-token`. If neither exists, stop before mutation and tell the user to run:
+
+```bash
+security add-generic-password \
+  -a "$USER" \
+  -s xpert-local-plugin-token \
+  -U \
+  -w
+```
+
+Explain that the final `-w` securely prompts for the token, then wait for confirmation before retrying. Never inspect browser Local Storage, cookies, network headers, or shell history for credentials, and never ask the user to paste a token into chat or a repository file. Treat HTTP `401` as a missing, expired, or invalid token and provide the same replacement procedure.
+
+Do not manually copy or edit the host plugin staging directory. If runtime behavior remains stale after a successful deployment, restart the local API and rerun `plugin:deploy:local`. For production, either publish the plugin as an npm/internal artifact and install it through the platform plugin flow, or include it as a platform-owned built-in system plugin when that is truly intended.
 
 If the plugin also has an explicitly requested MCP surface, validate that surface with the dedicated Xpert plugin development MCP guidance; keep that validation separate from the Workbench extension view flow.
 
@@ -412,4 +424,5 @@ Before finishing, verify:
 - Source and test code do not use broad type escape hatches (`as any`, `as unknown as`, `: any`, `: unknown`) except for a deliberately isolated compatibility helper; concrete library, SDK, bridge, and mock types are used instead.
 - Assistant template includes required plugins/capabilities and practical starter prompts.
 - Tests cover service behavior, middleware tool calls, manifest/view actions, remote component bridge behavior, and end-to-end user flow.
+- Local deployment uses `plugin:deploy:local`, preserves credentials outside logs and repositories, and verifies the loaded plugin descriptor.
 - Optional MCP surfaces, when explicitly requested, are validated separately with the dedicated plugin development MCP checklist.
