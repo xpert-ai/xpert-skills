@@ -143,6 +143,49 @@ Useful config validation endpoint:
 
 1. `POST /api/xpert-toolset/builtin-provider/:name/instance`
 
+## Prevent TypeScript tool-schema type explosions
+
+LangChain's `tool()` helper supports Zod v3, Zod v4, and JSON Schema overloads. In a middleware that returns many heterogeneous structured tools, TypeScript can retain every complete schema generic and repeatedly compare the resulting recursive tool types against the plugin SDK array. The symptom is `tsc` exhausting several gigabytes of heap even though the runtime code and emitted JavaScript are small.
+
+Do not treat a larger `NODE_OPTIONS=--max-old-space-size=...` value as the fix. Diagnose the boundary first:
+
+1. run the package typecheck with `--extendedDiagnostics` and the default Node heap
+2. use a minimal temporary `tsconfig` to compare individual middleware files when locating the hotspot
+3. check that `@xpert-ai/plugin-sdk`, `@xpert-ai/contracts`, LangChain, and Zod resolve to intentional, compatible versions instead of duplicate structural type trees
+4. inspect heterogeneous arrays of values returned directly by overloaded `tool()` calls
+
+Keep the callback input and runtime schema fully typed, but erase the redundant schema-bearing return generic once at the SDK boundary. Use one named, documented helper rather than assertions in each middleware:
+
+```ts
+import { tool } from '@langchain/core/tools'
+import type { AgentMiddleware } from '@xpert-ai/plugin-sdk'
+import type { z } from 'zod/v3'
+
+type PluginAgentTool = NonNullable<AgentMiddleware['tools']>[number]
+
+type PluginAgentToolFactory = <TInput>(
+  handler: (input: TInput) => Promise<unknown>,
+  fields: {
+    name: string
+    description: string
+    schema: z.ZodTypeAny
+    verboseParsingErrors?: boolean
+  }
+) => PluginAgentTool
+
+export const defineAgentTool = tool as unknown as PluginAgentToolFactory
+```
+
+At each call site, continue deriving or declaring the exact handler input and pass the real Zod schema, for example `defineAgentTool(async (input: z.infer<typeof schema>) => ..., { schema, ... })`. This preserves runtime validation and useful editor types while preventing the full schema type from contaminating the middleware return type.
+
+Rules:
+
+1. isolate the compatibility assertion in this single helper; do not scatter `as any`, `as unknown as`, untyped callbacks, or casts through business logic
+2. type the helper's return as the actual plugin SDK tool element, not a locally copied approximation
+3. keep `verboseParsingErrors: true` and precise schema descriptions
+4. after the change, run the complete package typecheck without a custom heap and record `Memory used`, `Instantiations`, and total time from `--extendedDiagnostics`
+5. if memory remains excessive, continue reducing or splitting the implicated boundary instead of normalizing a multi-gigabyte heap setting
+
 ## Common failures
 
 1. `Cannot find ... dist/index.js`: build output is incomplete
