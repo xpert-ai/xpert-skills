@@ -1,0 +1,4 @@
+interface:
+  display_name: "Xpert Plugin Development"
+  short_description: "Build and validate Xpert plugins and runtime integrations"
+  default_prompt: "Use $xpert-plugin-development to implement or review an Xpert plugin change, including Sandbox Jobs for isolated background execution."

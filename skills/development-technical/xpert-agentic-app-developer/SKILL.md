@@ -1,15 +1,17 @@
 ---
 name: xpert-agentic-app-developer
-description: Develop custom Agentic Apps on the Xpert platform as independent plugins. Use when Codex needs to design, implement, review, or document an Xpert business plugin that exposes Agent middleware tools, server modules, data models, Workbench views, remote components, Assistant templates, targetAppMeta capabilities, local plugin registration, or production plugin packaging.
+description: Develop custom Agentic Apps on the Xpert platform as independent plugins, with a primary focus on extension views, Workbench views, remote components, Agent middleware tools, server modules, data models, Assistant templates, targetAppMeta capabilities, local plugin registration, and production plugin packaging.
 ---
 
 # Xpert Agentic App Developer
 
 ## Overview
 
-Use this skill to build an Xpert Agentic App as a production plugin, not as a loose prompt or a few attached tools. Treat the app as a closed loop: plugin metadata, server module, Agent middleware tools, persistence, Workbench review UI, Assistant template, installation, and tests.
+Use this skill to build an Xpert Agentic App as a production plugin, not as a loose prompt or a few attached tools. Treat the app as a closed loop: plugin metadata, server module, Agent middleware tools, persistence, Workbench or extension view UI, Assistant template, installation, and tests.
 
 Do not confuse **Agent middleware tools** with workflow **Agent Tool** nodes. In this workflow, "tools" means callable tools returned by Agent middleware to the agent runtime.
+
+The primary UI path for this skill is an Xpert extension view: a Workbench view manifest plus a remote component or platform-rendered view. If a task is primarily about plugin-managed MCP tools or MCP Apps, use the dedicated Xpert plugin development MCP guidance instead; this skill only mentions that path as an optional integration surface.
 
 ## Development Workflow
 
@@ -19,7 +21,7 @@ Do not confuse **Agent middleware tools** with workflow **Agent Tool** nodes. In
 4. Register the server module, entities, services, middleware, and view provider.
 5. Expose business actions as Agent middleware tools with strict schemas and call order.
 6. Persist reviewable business data with evidence, confidence, status, and failure state.
-7. Add a Workbench view for human review and operational actions.
+7. Add a Workbench or extension view for human review and operational actions.
 8. Provide an Assistant template so users can create the business assistant in one step.
 9. Build and register the plugin from an independent plugin repository.
 10. Validate with unit, integration, manifest, and end-to-end tests.
@@ -31,8 +33,56 @@ An Agentic App should usually include:
 - **Business plugin**: `XpertPlugin` metadata, config schema, target apps, capabilities, templates, lifecycle.
 - **Agent middleware tools**: zod schemas, tool descriptions, ordered tool calls, per-item persistence, failure reporting.
 - **Services and data models**: domain entities, review state, source evidence, confidence, audit-friendly outputs.
-- **Workbench view**: view manifest, actions, data queries, host event subscriptions, optional remote component UI.
+- **Workbench or extension view**: view manifest, actions, data queries, host event subscriptions, optional remote component UI.
 - **Assistant template**: DSL content, required plugins, capabilities, model options, starter prompts.
+- **Optional MCP surface**: only when explicitly requested, expose standard MCP tools or MCP Apps through plugin-managed MCP servers; keep detailed MCP implementation guidance outside this skill.
+
+## Type Boundary Hygiene
+
+When TypeScript code shows `any` or `unknown` around plugin, SDK, React, remote bridge, or domain-library boundaries, inspect the real upstream types before editing. Avoid normalizing patterns such as `as any`, `as unknown as`, `: any`, `: unknown`, `Record<string, any>`, broad callback parameters, or untyped mocks. Prefer importing the concrete type, deriving callback/event types with `Parameters<>` / `ReturnType<>`, writing narrow type guards, or defining a small boundary DTO such as a JSON payload type. Keep unavoidable compatibility assertions local to the integration boundary through a named helper, and do not let the assertion flow into application logic.
+
+## Debug Logging Standard
+
+Every Agentic App with middleware tools, host events, or a remote component should include a switchable debug logger before deep debugging. Do not rely on ad hoc `console.info` statements. Detailed logs must be off by default in production and easy to enable during local development. For remote components, the host renderer should derive the default debug state from the Cloud `environment.production` value and pass it in the iframe `init` message, for example `{ debug: { enabled: !environment.production, production: environment.production } }`; the iframe should consume that value as its default and should not infer development mode from `localhost`, hostname, API URL, tenant, organization, or token-like values.
+
+Use a small shared logger per plugin surface:
+
+```ts
+type DebugLevel = 'debug' | 'info' | 'warn' | 'error'
+
+export function createPluginDebugLogger(namespace: string) {
+  const key = `xpert.debug.${namespace}`
+  const enabled = () =>
+    globalThis.localStorage?.getItem(key) === '1' ||
+    new URLSearchParams(globalThis.location?.search || '').get('xpertDebug') === namespace
+
+  return {
+    debug(event: string, data?: object) {
+      if (enabled()) console.debug(`[${namespace}] ${event}`, redactDebugData(data))
+    },
+    info(event: string, data?: object) {
+      if (enabled()) console.info(`[${namespace}] ${event}`, redactDebugData(data))
+    },
+    warn(event: string, data?: object) {
+      console.warn(`[${namespace}] ${event}`, redactDebugData(data))
+    },
+    error(event: string, data?: object) {
+      console.error(`[${namespace}] ${event}`, redactDebugData(data))
+    }
+  }
+}
+```
+
+Keep this logger tiny and typed. Implement `redactDebugData` beside the logger to remove secrets and summarize large values before printing. Enable logging explicitly with `localStorage.setItem('xpert.debug.<entry>', '1')` or `?xpertDebug=<entry>`; support a `localStorage` value of `0` as a force-off override even when the host default enables debug. If server-side debug is needed, gate it through plugin config or an explicit environment flag, never through user-provided request data.
+
+Log only useful checkpoints:
+
+- Middleware: tool name, tool call id, compact input summary, target business id, success/failure, duration.
+- Host event bus: event id, event type, source, tool name, target business id, subscription key.
+- Remote bridge: init, host event received, event normalization result, requestData/action request id, response summary.
+- Remote component state: selected business id, dirty state, refresh decision, diff counts, applied/skipped reason.
+
+Never log tokens, credentials, raw file buffers, base64/data URLs, tenant ids, organization ids, full snapshots, full tool outputs, or personally sensitive content. Redact or summarize large payloads before printing. Production builds may keep `warn` and `error`, but debug/info must stay gated.
 
 ## Independent Plugin Repository
 
@@ -125,11 +175,15 @@ contract_upsert_header
 Tool design rules:
 
 - Use zod schemas and precise field descriptions.
+- Set `verboseParsingErrors: true` on every LangChain structured tool configuration so schema failures include actionable Zod or JSON Schema details that the Agent can use to correct its next call instead of receiving only `Received tool input did not match expected schema`.
 - State call order in tool descriptions.
 - Save long lists one item at a time.
 - Include required `technicalAttributes` / `differences` arrays, or domain equivalents, even when empty.
 - Require source evidence for important extracted values.
 - Provide a failure-reporting tool for unreadable files or incomplete parsing.
+- Return compact operation DTOs by default: business id, revision/status, a human message, changed ids/counts, blocking diagnostics, and the next recovery action. Never return a full document, scene, IR, binary payload, or complete history from a mutation or validation tool. Expose full content only through an explicit paged/item-level read tool.
+- Give every user-visible mutation schema a bounded `changeSummary`. When it is present, middleware `wrapToolCall` must publish `ON_TOOL_MESSAGE` events for `running`, `success`, and `fail`; use the exact summary as both the step `title` and `message`, and keep the stable tool name in the event `tool` field. Event publication failure must not fail the business operation.
+- Await every asynchronous service call before serializing the tool result. Never pass a live Promise to `JSON.stringify` or detach a rejecting Promise from the tool invocation.
 
 Example:
 
@@ -147,16 +201,38 @@ const saveContractHeaderTool = tool(
     name: 'contract_upsert_header',
     description:
       'Create or reset the parsed contract header. Call this before saving line items.',
-    schema: contractHeaderSchema
+    schema: contractHeaderSchema,
+    verboseParsingErrors: true
   }
 )
 ```
+
+## Optional MCP Tools and MCP Apps
+
+This skill is not the primary guide for plugin-managed MCP tools or MCP Apps. When the user explicitly asks for MCP tools, MCP Apps, `.xpertai-plugin/plugin.json` `mcpServers`, `ui://` resources, or ChatKit inline MCP App rendering, switch to the dedicated plugin development guidance for that surface.
+
+Keep the boundary clear:
+
+- Use this skill for Xpert-native Agentic Apps built around server modules, Agent middleware tools, Workbench extension views, remote components, Assistant templates, and persisted business state.
+- Use plugin-managed MCP tools when the callable surface must be standard MCP and installed as a Toolset resource.
+- Use MCP Apps only for inline interactive HTML returned by MCP tool calls; do not substitute MCP Apps for persistent Workbench or integration pages.
+- If an Agentic App also exposes MCP tools, keep the MCP server packaging and bridge details isolated from the extension view implementation.
 
 ## Workbench View
 
 Add a Workbench view when users must review, correct, approve, reject, upload files, or submit results. Use a remote component iframe when the UI needs custom interaction beyond declarative tables and forms.
 
 For React remote component views, prefer TSX as the default development mode. Implement the view as maintainable React TypeScript source, preferably `remote-components/<entry>/src/main.tsx` plus supporting `*.ts`/`*.tsx` files, and generate the iframe entry `app.js` through a repeatable build step such as esbuild. Do not hand-maintain a large `React.createElement` `app.js` as the source of truth unless the user explicitly asks for a no-build static script or the existing plugin already has a deliberate no-build convention. Keep the generated `app.js` only as the runtime artifact read by `renderRemoteReactIframeHtml`, and wire `build`, `typecheck` or an equivalent check so stale generated output is caught.
+
+### Confirmation Dialog Standard
+
+Treat confirmation as a dedicated interaction pattern for consequential, destructive, security-sensitive, or irreversible actions. Do not use browser-native dialogs or a generic content modal as a confirmation substitute. Reserve ordinary dialogs for forms, details, previews, and other non-confirmation content.
+
+Provide an explicit title, consequence-focused description, Cancel action, and confirmation action. Visually distinguish destructive actions. Resolve dismiss, Escape, overlay close, and Cancel as cancellation. Execute the protected operation only after explicit confirmation. For asynchronous mutations, prevent duplicate submission, expose pending state, and keep failures recoverable. Keep confirmation copy localized and state-driven.
+
+Audit existing confirmation flows when touching this interaction pattern. Verify that maintained UI source contains no browser-native confirmation calls, rebuild generated remote assets, and exercise both cancel and confirm paths in tests or browser verification. For React implementations using shadcn UI, read [references/shadcn-ui.md](references/shadcn-ui.md) before editing.
+
+For React project and remote component development, especially when React is supplied by the host iframe runtime or when TypeScript hover/types appear as `any`, read `references/react-project-development.md` before editing.
 
 ### Plugin i18n Standard
 
@@ -228,8 +304,7 @@ Security and integration rules:
 - Route iframe data and actions through the platform bridge and view-host.
 - Declare every backend interaction in the manifest before the remote component uses it.
 - Use file actions for uploads and JSON actions for normal commands.
-- For table views, declare pagination/search support in `querySchema`, and keep backend list endpoints tenant/organization scoped before filtering and paginating.- Remote component iframes are sandboxed and may not include `allow-modals`; do not rely on `window.confirm`, `window.alert`, or `window.prompt`. Implement destructive-action confirmation with inline UI state, a small confirmation panel, or a host/view action flow instead.
-
+- For table views, declare pagination/search support in `querySchema`, and keep backend list endpoints tenant/organization scoped before filtering and paginating.
 
 ## Tool Completion Events
 
@@ -255,6 +330,26 @@ hostEvents: {
 ```
 
 Use `refresh` for simple declarative views. Use `forward` for remote components so the iframe can switch tabs, update query parameters, or refresh only affected panels.
+
+For remote components, implement the event path as a closed protocol, not a best-effort side effect:
+
+1. Middleware mutation tools must return a compact result that includes the mutated business id whenever possible, such as `documentId`, `drawingId`, `recordId`, `versionId`, and a human `message`.
+2. The host event publisher must preserve a compact `data.input` and `data.output` summary when forwarding ChatKit tool logs. It may redact host ids before iframe delivery, but it should not drop the target business id.
+3. The view manifest must declare `hostEvents.subscriptions` with stable `key`, exact `event`, `sources`, and `toolNames`. Use `action.type: 'forward'` for remote components and a small debounce only for duplicate bursts.
+4. The remote bridge must forward the normalized event to the iframe and tolerate common envelope shapes: `event`, `payload`, `data`, `result`, and the whole message as fallback.
+5. The remote component must normalize tool events in one tested helper. Read tool name from top-level fields, `payload/data`, `toolCall/tool_call`, `function`, `content`, and JSON string previews. Read target ids from top-level fields, `input`, `args`, `target`, `output/result`, `document/item`, and truncated `argsPreview` when possible.
+6. The remote component must keep current selection, current business id, editor instance, dirty flag, and `loadData`/refresh callbacks in refs used by the host event handler. Do not let a `useEffect([])` event listener call a stale render closure.
+7. The event handler must log, when debug is enabled, `received -> normalized -> target resolved -> request started -> response received -> state applied/skipped`.
+8. Refresh behavior must match the mutation: update lists and metadata, then apply only the affected remote state. For canvas-like editors, use the domain library's remote-change API such as `store.mergeRemoteChanges`; avoid remounting the whole editor for autosave or tool insertions unless the document id changed.
+9. Protect local edits deliberately. If the current scene is dirty and the event targets the same document, either merge safely, defer with a visible warning, or force an autosave first. Do not silently discard local changes.
+
+Add tests for the whole event contract:
+
+- Host event conversion from ChatKit logs includes tool name and target id.
+- Renderer forwards the event to the iframe and preserves `data.input` / `data.output` summaries.
+- Remote event parser handles direct, nested, `toolCall`, `content`, and truncated `argsPreview` shapes.
+- Remote host event handler uses the latest refs, resolves the correct target id, calls `requestData`, and applies or skips state with an explicit reason.
+- Generated remote component output is checked so the runtime `app.js` cannot drift from TSX source.
 
 ## Assistant Template
 
@@ -287,6 +382,8 @@ After changes, rebuild the independent plugin package and reinstall or reload it
 
 When developing against a local Xpert runtime, rebuilding the source package may not update the already installed runtime copy. Locate the installed plugin under the host plugin directory and sync or reinstall the built `dist`, remote component assets, scripts, package metadata, and docs before testing the UI. Re-run the plugin build after TSX changes so generated `app.js` matches source.
 
+If the plugin also has an explicitly requested MCP surface, validate that surface with the dedicated Xpert plugin development MCP guidance; keep that validation separate from the Workbench extension view flow.
+
 ## Documentation Guidance
 
 When writing user-facing docs for this workflow:
@@ -295,6 +392,7 @@ When writing user-facing docs for this workflow:
 - Link platform features such as plugin development, custom middleware, Workbench, ChatKit, remote components, Assistant configuration, and plugin installation.
 - Say "Agent middleware tools" when referring to tools exposed by middleware.
 - Avoid linking these middleware tools to workflow Agent Tool node documentation unless the text is actually about workflow nodes.
+- If MCP tools or MCP Apps are explicitly part of the request, link to the dedicated plugin development MCP guidance instead of expanding that protocol detail in this skill.
 - Keep docs bilingual only when requested; otherwise follow the target documentation locale.
 
 ## Validation Checklist
@@ -305,11 +403,13 @@ Before finishing, verify:
 - SDK dependency is a peer dependency.
 - Server module registers entities, services, middleware, and view providers.
 - All plugin entities include `tenantId` and `organizationId`, write paths populate them, and all data reads/mutations are scoped by tenant/organization whenever context is available.
-- Middleware tools have schemas, descriptions, ordered workflow, per-item persistence, and failure reporting.
+- Middleware tools have schemas, descriptions, ordered workflow, per-item persistence, failure reporting, and `verboseParsingErrors: true` on every structured tool configuration.
 - Data model preserves source evidence, confidence, review status, and failure reasons.
 - Workbench manifest declares data source, actions, file actions, host events, and remote component entry when used.
+- Every confirmation uses the designated accessible confirmation primitive; maintained UI source contains no browser-native confirmation calls or generic content-dialog substitutes.
 - Remote component table views use scalar query parameters, remote pagination, per-tab filters, and total/page/pageSize metadata instead of fetching all rows into the iframe.
 - View icons use `IconDefinition` object form where supported, with any SDK compatibility cast scoped to the icon field only.
-- Remote component UI avoids browser modal APIs such as `window.confirm`, `window.alert`, and `window.prompt`; sandbox-safe confirmations are implemented inline.
+- Source and test code do not use broad type escape hatches (`as any`, `as unknown as`, `: any`, `: unknown`) except for a deliberately isolated compatibility helper; concrete library, SDK, bridge, and mock types are used instead.
 - Assistant template includes required plugins/capabilities and practical starter prompts.
 - Tests cover service behavior, middleware tool calls, manifest/view actions, remote component bridge behavior, and end-to-end user flow.
+- Optional MCP surfaces, when explicitly requested, are validated separately with the dedicated plugin development MCP checklist.

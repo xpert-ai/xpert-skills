@@ -6,19 +6,21 @@ Core directories in `xpert-plugins`:
 
 1. `plugin-dev-harness/`
 2. `xpertai/tools/`
-3. `xpertai/models/`
-4. `xpertai/integrations/`
-5. `xpertai/middlewares/`
-6. `xpertai/.verdaccio/`
+3. `xpertai/examples/`
+4. `xpertai/models/`
+5. `xpertai/integrations/`
+6. `xpertai/middlewares/`
+7. `xpertai/.verdaccio/`
 
 Meaning:
 
 1. `tools` contains agent-callable tools.
-2. `models` contains model provider plugins.
-3. `integrations` contains third-party integrations and callback-driven plugins.
-4. `middlewares` contains runtime extension plugins.
-5. `plugin-dev-harness` is for fast smoke testing.
-6. `.verdaccio` supports local private npm registry workflows.
+2. `examples` contains tutorial and reference plugins that should stay buildable but are not primary product plugin categories.
+3. `models` contains model provider plugins.
+4. `integrations` contains third-party integrations and callback-driven plugins.
+5. `middlewares` contains runtime extension plugins.
+6. `plugin-dev-harness` is for fast smoke testing.
+7. `.verdaccio` supports local private npm registry workflows.
 
 ## Standard plugin shape
 
