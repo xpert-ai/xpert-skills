@@ -144,36 +144,45 @@ corepack pnpm plugin:deploy:local --plugin-dir <plugin-dir> --org-id <org-id> --
 corepack pnpm plugin:deploy:local --plugin-dir <plugin-dir> --org-id <org-id> --force-install
 ```
 
-Use `--tenant-id <id> --scope tenant` for tenant scope. Do not guess tenant or organization identifiers; discover them from the local environment or ask the user for the non-secret identifier.
+Use `--scope tenant` for tenant scope. When username/password login is used, the command may infer the tenant from the authenticated user response; `--tenant-id <id>` remains available for an explicit override. Organization scope still requires `--org-id <id>` or `XPERT_ORG_ID`. Do not guess organization identifiers; discover them from the local environment or ask the user for the non-secret identifier.
 
-## Authentication and missing-token procedure
+## Authentication and missing-credentials procedure
 
-Resolve credentials in this order:
+Resolve authentication in this order:
 
 1. an explicitly supplied `--token` only when the user intentionally provided it outside chat
-2. `XPERT_TOKEN` in the current process environment
-3. the macOS Keychain item named `xpert-local-plugin-token` for the current OS user
+2. a complete username/password pair from explicit CLI options, the current process environment, or macOS Keychain; the CLI exchanges it at `/api/auth/login` for a fresh JWT
+3. `XPERT_TOKEN` in the current process environment as a compatibility fallback
+4. the legacy macOS Keychain item named `xpert-local-plugin-token` for the current OS user
 
-If no token is available:
-
-1. stop before build, installation, or refresh; do not repeatedly call the API
-2. do not inspect browser Local Storage, cookies, network headers, shell history, or unrelated process environments
-3. do not ask the user to paste a token into chat, a command argument, a tracked `.env` file, or a repository file
-4. tell the user to run this command locally, which prompts for the secret without placing it in shell history:
+Prefer username/password login for local development. Store credentials in macOS Keychain with separate username and password items:
 
 ```bash
 security add-generic-password \
   -a "$USER" \
-  -s xpert-local-plugin-token \
+  -s xpert-local-plugin-username \
+  -U \
+  -w "<xpert-username>"
+
+security add-generic-password \
+  -a "<xpert-username>" \
+  -s xpert-local-plugin-password \
   -U \
   -w
 ```
 
-5. explain that the final `-w` prompts for the token, then wait for the user to confirm setup before rerunning deployment
+The second command prompts for the password without placing it in shell history. The CLI reads both items, calls the configured login endpoint (default `/api/auth/login`), keeps the returned JWT in memory only, and uses the authenticated user's tenant when no explicit tenant override is present. Never print the username, password, JWT, or complete plugin configuration.
 
-On non-macOS systems, ask the user to inject `XPERT_TOKEN` through their approved local secret manager or current process environment. Never create an untracked secret file on the user's behalf unless they explicitly request that storage method.
+If credentials are unavailable or incomplete:
 
-Treat HTTP `401` as missing, expired, or invalid authentication. Provide the same safe replacement instructions instead of printing the rejected token or attempting to recover a browser session credential.
+1. stop before build, installation, or refresh; do not repeatedly call the API
+2. do not inspect browser Local Storage, cookies, network headers, shell history, or unrelated process environments
+3. do not ask the user to paste a password or token into chat, a command argument, a tracked `.env` file, or a repository file
+4. provide the Keychain commands above, then wait for the user to confirm setup before rerunning deployment
+
+On non-macOS systems, ask the user to inject `XPERT_USERNAME` and `XPERT_PASSWORD` through their approved local secret manager or current process environment. Direct `--username` and `--password` options exist for controlled automation but should not be the default because command arguments may be retained by shell history or process inspection. Never create an untracked secret file on the user's behalf unless they explicitly request that storage method.
+
+Treat a login `401` as invalid username/password. Treat an install or refresh `401` as an expired or invalid JWT and retry the normal login path once. Provide the same safe credential replacement instructions instead of printing a rejected secret or attempting to recover a browser session credential.
 
 ## Update workflow
 

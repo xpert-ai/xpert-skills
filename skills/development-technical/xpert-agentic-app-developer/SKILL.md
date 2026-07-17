@@ -380,17 +380,25 @@ corepack pnpm plugin:deploy:local \
 
 Use `plugin:deploy:local` as the default local lifecycle command when the platform exposes it. It detects the package name, builds and tests the plugin, refreshes an existing local `source=code` registration, falls back to first-time installation with `sourceConfig.workspacePath`, and verifies the loaded descriptor. Use `--skip-build` or `--skip-test` only when those exact validations already passed in the same task.
 
-Resolve authentication from `XPERT_TOKEN` or the current user's macOS Keychain item named `xpert-local-plugin-token`. If neither exists, stop before mutation and tell the user to run:
+Prefer username/password login for local deployment. Configure the current OS user's Xpert username and that Xpert account's password as separate macOS Keychain items:
 
 ```bash
 security add-generic-password \
   -a "$USER" \
-  -s xpert-local-plugin-token \
+  -s xpert-local-plugin-username \
+  -U \
+  -w "<xpert-username>"
+
+security add-generic-password \
+  -a "<xpert-username>" \
+  -s xpert-local-plugin-password \
   -U \
   -w
 ```
 
-Explain that the final `-w` securely prompts for the token, then wait for confirmation before retrying. Never inspect browser Local Storage, cookies, network headers, or shell history for credentials, and never ask the user to paste a token into chat or a repository file. Treat HTTP `401` as a missing, expired, or invalid token and provide the same replacement procedure.
+The second command securely prompts for the password. `plugin:deploy:local` reads these credentials, calls `/api/auth/login`, keeps the returned JWT in memory only, and may infer the tenant from the login response. `XPERT_USERNAME` plus `XPERT_PASSWORD` is the non-macOS/current-process alternative. An explicit `--token` remains an intentional override; `XPERT_TOKEN` and the legacy `xpert-local-plugin-token` Keychain item are compatibility fallbacks used only when login credentials are absent.
+
+If credentials are missing or incomplete, stop before mutation, show the Keychain commands above, and wait for confirmation before retrying. Never inspect browser Local Storage, cookies, network headers, or shell history for credentials, and never ask the user to paste a password or token into chat or a repository file. Treat a login `401` as invalid credentials; treat an install or refresh `401` as an expired JWT and retry the normal login path without printing any secret.
 
 Do not manually copy or edit the host plugin staging directory. If runtime behavior remains stale after a successful deployment, restart the local API and rerun `plugin:deploy:local`. For production, either publish the plugin as an npm/internal artifact and install it through the platform plugin flow, or include it as a platform-owned built-in system plugin when that is truly intended.
 

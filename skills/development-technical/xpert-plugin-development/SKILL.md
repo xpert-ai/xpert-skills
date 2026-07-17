@@ -35,7 +35,7 @@ Repository:
 11. If the task is about `.xpertai-plugin/plugin.json`, plugin-managed MCP servers, MCP tool metadata, `ui://` resources, MCP Apps, or ChatKit inline app rendering, also read `references/mcp-tools-and-apps.md`.
 12. If the task is about Xpert skill-only plugins, Codex-to-Xpert skill conversion, skill marketplace cards, skill resource installation, skill document dialogs, or ClawXpert skill trial flows, also read `references/skill-only-plugins.md`.
 13. Prefer the platform's `plugin:deploy:local` command for local development. It builds, tests, refreshes an existing `source=code` plugin or installs it on first use, and verifies the loaded descriptor. Use the manual `source=code + sourceConfig.workspacePath` flow only when that command is unavailable.
-14. Resolve deployment authentication from `XPERT_TOKEN` or the `xpert-local-plugin-token` macOS Keychain item. If neither exists, follow the missing-token procedure in `references/general.md`; never extract browser credentials or ask the user to paste a token into chat.
+14. Prefer configured Xpert username/password credentials for local deployment. The platform CLI logs in for a fresh JWT, uses it only for the current process, and may infer the tenant from the login response. Treat an explicit `--token` as an intentional override; keep `XPERT_TOKEN` and the legacy token Keychain item only as compatibility fallbacks. Follow the credential setup procedure in `references/general.md`; never extract browser credentials or ask the user to paste a password or token into chat.
 15. Before finishing, verify build output, installation, runtime behavior, and submit only relevant files.
 
 ## Rules
