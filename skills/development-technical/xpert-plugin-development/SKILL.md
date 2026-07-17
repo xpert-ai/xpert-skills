@@ -38,6 +38,12 @@ Repository:
 14. Prefer configured Xpert username/password credentials for local deployment. The platform CLI logs in for a fresh JWT, uses it only for the current process, and may infer the tenant from the login response. Treat an explicit `--token` as an intentional override; keep `XPERT_TOKEN` and the legacy token Keychain item only as compatibility fallbacks. Follow the credential setup procedure in `references/general.md`; never extract browser credentials or ask the user to paste a password or token into chat.
 15. Before finishing, verify build output, installation, runtime behavior, and submit only relevant files.
 
+## System-Level Artifact Isolation
+
+Treat a plugin that registers or exposes host server capabilities such as TypeORM entities, controllers, server modules, routes, or equivalent process-global infrastructure as a system-level plugin. It must declare both `meta.level: 'system'` and a stable `meta.artifactNamespace`; do not rely on the package-name compatibility fallback.
+
+Use the same `artifactNamespace` as the source of every plugin-owned artifact name. Build database table names, controller route prefixes, provider/view/registry keys, queue identifiers, and other process-global or persisted unique strings through a shared namespace constant and contract-appropriate helper. Do not scatter copied namespace literals or create unnamespaced identifiers that can drift during later refactors. Keep package or bundle metadata aligned with runtime metadata, and test the namespace plus all derived artifact names. See `references/general.md` for the required naming and validation pattern.
+
 ## Rules
 
 1. Keep package metadata, exported entrypoints, schema, and runtime behavior aligned.

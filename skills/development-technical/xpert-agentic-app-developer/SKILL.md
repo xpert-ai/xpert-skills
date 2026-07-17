@@ -17,7 +17,7 @@ The primary UI path for this skill is an Xpert extension view: a Workbench view 
 
 1. Inspect the target plugin repository and the host app conventions before editing.
 2. Define the business loop: what the Agent automates, what humans review, and what the system persists.
-3. Implement the plugin entry and target app metadata.
+3. Determine whether the plugin provides host server capabilities; if it registers entities, controllers, routes, or equivalent process-global infrastructure, declare it as system level and define its stable artifact namespace before implementing artifact identifiers.
 4. Register the server module, entities, services, middleware, and view provider.
 5. Expose business actions as Agent middleware tools with strict schemas and call order.
 6. Persist reviewable business data with evidence, confidence, status, and failure state.
@@ -30,7 +30,7 @@ The primary UI path for this skill is an Xpert extension view: a Workbench view 
 
 An Agentic App should usually include:
 
-- **Business plugin**: `XpertPlugin` metadata, config schema, target apps, capabilities, templates, lifecycle.
+- **Business plugin**: `XpertPlugin` metadata, system level and artifact namespace when server capabilities are present, config schema, target apps, capabilities, templates, lifecycle.
 - **Agent middleware tools**: zod schemas, tool descriptions, ordered tool calls, per-item persistence, failure reporting.
 - **Services and data models**: domain entities, review state, source evidence, confidence, audit-friendly outputs.
 - **Workbench or extension view**: view manifest, actions, data queries, host event subscriptions, optional remote component UI.
@@ -94,6 +94,7 @@ Each plugin package should declare its package metadata and SDK peer dependency:
 {
   "name": "@acme/plugin-contract-review",
   "version": "0.1.0",
+  "artifactNamespace": "contract_review",
   "main": "dist/index.cjs.js",
   "types": "dist/index.d.ts",
   "peerDependencies": {
@@ -106,6 +107,34 @@ Keep `@xpert-ai/plugin-sdk` in `peerDependencies`, not `dependencies`, so the pl
 
 When updating `@xpert-ai/contracts` or `@xpert-ai/plugin-sdk`, verify the versions are actually published or available from the active workspace before committing lockfile changes. If a requested peer range is not published yet, do not force a broad `pnpm-lock.yaml` rewrite or disable peer installation for the whole workspace; record the peer range only when the host is expected to provide it, and keep development-only type packages in `devDependencies` only when they are needed for local compilation.
 
+## System-Level Plugin and Artifact Namespace
+
+An Agentic App that registers TypeORM entities, controllers, server modules, routes, or equivalent host-process capabilities is a system-level plugin. Declare `meta.level: 'system'` and an explicit, stable `meta.artifactNamespace`; never rely on the package-name fallback. The namespace may contain only lowercase letters, numbers, and underscores.
+
+Treat `artifactNamespace` as the root of plugin artifact identity, not as passive metadata:
+
+- Define it once as an exported constant.
+- Use `pluginArtifactTableName(namespace, tableKey)` for every entity table so the physical name is `plugin_<artifactNamespace>_<tableKey>`.
+- Derive controller route prefixes, provider/view/registry keys, Managed Queue identifiers, cache namespaces, persisted artifact keys, and other process-global unique strings from the same constant through small typed helpers.
+- Keep runtime meta, top-level package marketplace metadata, and bundle manifest metadata aligned when those surfaces exist.
+- Do not double-prefix contracts the platform already namespaces automatically; document and test the final resolved value.
+- Never rename a published namespace without an explicit migration for stored tables, references, and registered identifiers.
+
+```ts
+import { pluginArtifactTableName } from '@xpert-ai/plugin-sdk'
+
+export const PLUGIN_ARTIFACT_NAMESPACE = 'contract_review' as const
+export const pluginArtifactKey = (localKey: string) =>
+  `${PLUGIN_ARTIFACT_NAMESPACE}.${localKey}`
+
+export const CONTRACT_TABLE = pluginArtifactTableName(
+  PLUGIN_ARTIFACT_NAMESPACE,
+  'contract'
+)
+export const REVIEW_VIEW_KEY = pluginArtifactKey('review-view')
+export const CONTROLLER_ROUTE = `${PLUGIN_ARTIFACT_NAMESPACE}/contracts`
+```
+
 ## Plugin Entry Pattern
 
 Define `XpertPlugin` metadata as the app-facing capability contract. For data-xpert integration, prefer `targetApps` and `targetAppMeta` over ad hoc top-level business metadata.
@@ -116,6 +145,7 @@ const plugin: XpertPlugin<z.infer<typeof ConfigSchema>> = {
     name: '@acme/plugin-contract-review',
     version: '0.1.0',
     level: 'system',
+    artifactNamespace: PLUGIN_ARTIFACT_NAMESPACE,
     category: 'middleware',
     targetApps: ['data-xpert'],
     targetAppMeta: {
@@ -154,6 +184,16 @@ Register entities, services, Agent middleware, and view providers in the plugin 
   exports: [ContractReviewService]
 })
 export class ContractReviewPlugin {}
+```
+
+Declare entity names and controller routes from the namespace helpers instead of hardcoded global strings:
+
+```ts
+@Entity(CONTRACT_TABLE)
+export class ContractEntity {}
+
+@Controller(CONTROLLER_ROUTE)
+export class ContractController {}
 ```
 
 Model for review and recovery, not only for successful tool calls. Persist source document identity, page or location, evidence text, confidence, Agent rationale, human review status, comments, retry jobs, and failure reasons when relevant.
@@ -419,6 +459,9 @@ When writing user-facing docs for this workflow:
 
 Before finishing, verify:
 
+- Plugins that register entities, controllers, routes, or equivalent system capabilities declare `meta.level: 'system'` and an explicit stable `meta.artifactNamespace`.
+- Runtime, package, and bundle namespace metadata agree; emitted build output preserves the declaration.
+- Every entity table name uses `plugin_<artifactNamespace>_<tableKey>`, and all process-global or persisted routes, providers, views, queues, registries, caches, and artifact keys derive from the shared namespace constant unless the platform contract already namespaces them.
 - Plugin metadata declares `targetApps`, `targetAppMeta`, business types, and capabilities.
 - SDK dependency is a peer dependency.
 - Server module registers entities, services, middleware, and view providers.

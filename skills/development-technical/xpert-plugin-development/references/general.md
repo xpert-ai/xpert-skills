@@ -47,6 +47,58 @@ Typical plugin structure:
 4. `meta.version` and `package.json.version` must match.
 5. `config.schema` must be valid for both UI rendering and server validation.
 
+### System-level plugins and artifact namespaces
+
+Apply these rules whenever a plugin uses or provides host server capabilities such as TypeORM entities, controllers, server modules, routes, or equivalent process-global infrastructure:
+
+1. Declare the plugin as system level with `meta.level: 'system'`.
+2. Declare a stable `meta.artifactNamespace`. Use only lowercase letters, numbers, and underscores (`^[a-z0-9_]+$`). Do not depend on namespace derivation from the package name; that behavior is compatibility-only.
+3. Keep the namespace identical in every published metadata surface that exists for the plugin: runtime `XpertPlugin.meta.artifactNamespace`, top-level package metadata used by the marketplace, and `.xpertai-plugin/plugin.json` or `plugin.json` bundle metadata. A mismatch must be treated as an installation error.
+4. Choose the namespace once and keep it stable after release. Changing it changes artifact ownership and may require an explicit data and identifier migration.
+5. Define one exported namespace constant and derive plugin-owned artifact identifiers from it. Do not repeat a literal prefix throughout entities, controllers, providers, views, queues, registries, cache keys, or persisted references.
+6. Prefix every platform-global or persisted plugin artifact identifier. Use the separator required by that contract: database tables use `plugin_<artifactNamespace>_<tableKey>`; route prefixes and registry keys may use `/`, `.`, or `:` while still including the same namespace.
+7. Do not double-prefix identifiers that the platform contract already namespaces automatically. Document that boundary and test the final resolved identifier instead.
+
+Prefer the SDK table-name helper and a small helper for other identifiers:
+
+```ts
+import { pluginArtifactTableName } from '@xpert-ai/plugin-sdk'
+
+export const PLUGIN_ARTIFACT_NAMESPACE = 'contract_review' as const
+
+export const pluginArtifactKey = (localKey: string) =>
+  `${PLUGIN_ARTIFACT_NAMESPACE}.${localKey}`
+
+export const CONTRACT_TABLE = pluginArtifactTableName(
+  PLUGIN_ARTIFACT_NAMESPACE,
+  'contract'
+)
+export const REVIEW_VIEW_KEY = pluginArtifactKey('review-view')
+export const CONTROLLER_ROUTE = `${PLUGIN_ARTIFACT_NAMESPACE}/contracts`
+```
+
+Declare the runtime metadata from the same constant:
+
+```ts
+const plugin: XpertPlugin = {
+  meta: {
+    name: '@acme/plugin-contract-review',
+    version: '0.1.0',
+    level: 'system',
+    artifactNamespace: PLUGIN_ARTIFACT_NAMESPACE
+  },
+  // ...
+}
+```
+
+Validate before deployment:
+
+1. Assert `meta.level === 'system'` and `meta.artifactNamespace === PLUGIN_ARTIFACT_NAMESPACE`.
+2. Assert package or bundle namespace metadata equals runtime metadata.
+3. Enumerate registered TypeORM entities and verify every physical table name starts with `plugin_<artifactNamespace>_`.
+4. Verify controller routes and every process-global or persisted provider, view, queue, registry, cache, and artifact key contain the namespace through the shared helper.
+5. Rebuild the package and confirm the emitted entrypoint still contains the explicit namespace declaration.
+
 Required build outputs:
 
 1. `dist/index.js`
