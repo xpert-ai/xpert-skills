@@ -26,9 +26,10 @@ Treat 1,000 lines as an architecture-review threshold for maintained source file
 5. Expose business actions as Agent middleware tools with strict schemas and call order.
 6. Persist reviewable business data with evidence, confidence, status, and failure state.
 7. Add a Workbench or extension view for human review and operational actions.
-8. Provide an Assistant template so users can create the business assistant in one step.
-9. Build and register the plugin from an independent plugin repository.
-10. Validate with unit, integration, manifest, and end-to-end tests.
+8. When the app publishes previews or share links, read [references/artifact-share-links.md](references/artifact-share-links.md) and use the platform Artifacts and Workspace Files capabilities.
+9. Provide an Assistant template so users can create the business assistant in one step.
+10. Build and register the plugin from an independent plugin repository.
+11. Validate with unit, integration, manifest, and end-to-end tests.
 
 ## Architecture Checklist
 
