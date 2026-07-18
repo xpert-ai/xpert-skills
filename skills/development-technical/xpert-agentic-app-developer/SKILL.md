@@ -13,6 +13,10 @@ Do not confuse **Agent middleware tools** with workflow **Agent Tool** nodes. In
 
 The primary UI path for this skill is an Xpert extension view: a Workbench view manifest plus a remote component or platform-rendered view. If a task is primarily about plugin-managed MCP tools or MCP Apps, use the dedicated Xpert plugin development MCP guidance instead; this skill only mentions that path as an optional integration surface.
 
+## Golden Principle: Review Files Over 1,000 Lines
+
+Treat 1,000 lines as an architecture-review threshold for maintained source files. When a code file exceeds 1,000 lines, pause before adding more behavior and assess whether it combines multiple responsibilities. Split coherent responsibilities into focused files when clear boundaries exist, while preserving explicit ownership, stable public contracts, and test coverage. Do not mechanically fragment a cohesive file merely to satisfy the line count.
+
 ## Development Workflow
 
 1. Inspect the target plugin repository and the host app conventions before editing.

@@ -20,6 +20,10 @@ Repository:
 2. Local plugin repository root: discover from the current workspace instead of assuming a fixed absolute path
 3. Local platform backend root: discover from the current workspace instead of assuming a fixed absolute path
 
+## Golden Principle: Review Files Over 1,000 Lines
+
+Treat 1,000 lines as an architecture-review threshold for maintained source files. When a code file exceeds 1,000 lines, pause before adding more behavior and assess whether it combines multiple responsibilities. Split coherent responsibilities into focused files when clear boundaries exist, while preserving explicit ownership, stable public contracts, and test coverage. Do not mechanically fragment a cohesive file merely to satisfy the line count.
+
 ## Workflow
 
 1. Identify the plugin type first: general tool plugin, model plugin, integration plugin, middleware plugin, skill-only plugin, plugin-managed MCP server, or MCP App plugin.
