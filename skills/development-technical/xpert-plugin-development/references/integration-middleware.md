@@ -121,7 +121,7 @@ Common fields:
 
 Recommendations:
 
-1. keep schema style aligned with existing platform middleware conventions
+1. apply the strict input, DTO output, pagination, scope, and progressive-disclosure rules in `tool-contract-design.md`
 2. support runtime variables for recipient IDs
 3. if recipient type can be dynamic, model it clearly in schema instead of leaving it implicit
 4. always return debug-friendly result objects with success counts, failure counts, targets, and errors

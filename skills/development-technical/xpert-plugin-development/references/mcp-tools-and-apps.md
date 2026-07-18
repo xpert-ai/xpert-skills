@@ -2,6 +2,8 @@
 
 Use a plugin-managed MCP server when a plugin should expose standard MCP tools, stay portable across MCP hosts, or return interactive MCP Apps inside ChatKit.
 
+Apply `tool-contract-design.md` to every MCP tool input, output, pagination, authorization, and progressive-disclosure decision. This file adds MCP runtime, metadata, App, and packaging rules.
+
 Keep this path separate from other Xpert extension paths:
 
 1. Use normal tool plugins or Agent middleware for Xpert-native runtime workflows.

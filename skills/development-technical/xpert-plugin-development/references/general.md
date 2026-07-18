@@ -285,6 +285,8 @@ Use a deliberate i18n boundary instead of scattering strings:
 
 LangChain's `tool()` helper supports Zod v3, Zod v4, and JSON Schema overloads. In a middleware that returns many heterogeneous structured tools, TypeScript can retain every complete schema generic and repeatedly compare the resulting recursive tool types against the plugin SDK array. The symptom is `tsc` exhausting several gigabytes of heap even though the runtime code and emitted JavaScript are small.
 
+Apply the runtime input/output contract from `tool-contract-design.md`. This section only describes how to keep that strict schema contract without allowing overloaded tool generics to exhaust the compiler.
+
 Do not treat a larger `NODE_OPTIONS=--max-old-space-size=...` value as the fix. Diagnose the boundary first:
 
 1. run the package typecheck with `--extendedDiagnostics` and the default Node heap
@@ -320,7 +322,7 @@ Rules:
 
 1. isolate the compatibility assertion in this single helper; do not scatter `as any`, `as unknown as`, untyped callbacks, or casts through business logic
 2. type the helper's return as the actual plugin SDK tool element, not a locally copied approximation
-3. keep `verboseParsingErrors: true` and precise schema descriptions
+3. preserve the runtime schema and parsing diagnostics required by `tool-contract-design.md`
 4. after the change, run the complete package typecheck without a custom heap and record `Memory used`, `Instantiations`, and total time from `--extendedDiagnostics`
 5. if memory remains excessive, continue reducing or splitting the implicated boundary instead of normalizing a multi-gigabyte heap setting
 
