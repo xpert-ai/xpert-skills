@@ -287,17 +287,15 @@ For React project and remote component development, especially when React is sup
 
 ### Plugin i18n Standard
 
-For React view components, keep user-facing static text in a small i18n dictionary or the host platform i18n mechanism instead of hardcoding strings directly in JSX. Resolve text from the remote component host locale when available, provide at least the product's primary locale and English for reusable plugins, and leave backend audit/status values raw unless there is an explicit display mapping.
+Before adding, reviewing, or migrating user-visible copy or locale support, read [references/i18n.md](references/i18n.md). Use one plugin-owned, typed i18n facade per UI surface; components call semantic translation keys and shared `Intl` formatters instead of importing an engine directly.
 
-Use one typed locale boundary per plugin surface. Normalize host/platform locale values such as `zh_Hans`, `zh-Hans`, `zh_CN`, `en_US`, and `en-US` into a small supported set, normally `zh-Hans | en-US`, and default to English for reusable plugins. Keep conversion helpers close to the remote entrypoint or shared i18n module, not repeated inside each component.
+Never branch on locale to choose user-visible text inside JSX or ordinary component helpers. This includes labels, tooltips, placeholders, empty states, validation errors, confirmations, toast messages, table actions, filenames, and accessibility text. Organize catalogs by view/domain namespace, use the default catalog as the typed key schema, and enforce catalog parity in CI. Keep domain data raw unless its contract explicitly provides localized variants.
 
-Remote component source should import labels from a typed i18n module instead of each file inventing its own ad hoc dictionary. It is acceptable to keep component-local dictionaries while migrating, but all new text, status labels, tooltips, confirmation copy, empty states, validation messages, and table/action labels must go through the shared resolver. Build-time type checks should fail when a locale is missing a required key.
+Normalize the host iframe locale once at the remote entrypoint with explicit BCP 47 aliases and fallback. Keep `zh-Hans` and `zh-Hant` distinct; do not map every `zh*` locale to Simplified Chinese. Centralize platform key conversion (`en_US` / `zh_Hans`) and third-party editor locale mapping at narrow adapter boundaries.
 
-Backend plugin services should return stable language-neutral codes and structured DTOs by default, such as `status`, `errorCode`, `reason`, `target`, and `file` metadata. Localize those codes at the UI boundary. Only localize backend output when the artifact itself is user-facing, such as generated Excel/PDF/Word files, email text, toast-style view action messages, or explicit localized manifest metadata. In those cases, pass or derive a normalized locale and keep label tables centralized.
+Backend services and Agent middleware should return stable language-neutral status/error codes plus structured parameters. Localize display labels at the UI boundary and never return localized prose as the only state representation. Pass a normalized locale only when producing inherently user-facing artifacts such as Excel, PDF, Word, email, toast-style action messages, localized manifest metadata, or export filenames.
 
-For Workbench manifests and platform metadata, use platform localized objects such as `{ en_US, zh_Hans }`. Keep a narrow converter between platform locale keys and remote runtime locale keys. Do not mix `en_US`/`zh_Hans` and `en-US`/`zh-Hans` ad hoc in business logic.
-
-Agent middleware tool schemas and descriptions should generally remain stable English unless the platform explicitly supports localized tool metadata. Tool results should be compact and structured; do not return localized prose as the only representation of state. If a user-visible `message` is returned, prefer a localized message object or a code plus display mapping so the remote component can select the host language.
+Agent middleware tool schemas and descriptions should generally remain stable English unless the platform explicitly supports localized tool metadata. For Workbench manifests and platform metadata, use platform localized objects such as `{ en_US, zh_Hans }` and keep their conversion out of business components.
 
 For remote component data loading, route iframe requests through the platform bridge (`requestData` / `executeAction`) and the view provider. Keep initial `getViewData` responses light enough for first paint, then use tab-specific remote pagination for large tables. A stable pattern is:
 
@@ -484,6 +482,7 @@ Before finishing, verify:
 - Remote component table views use scalar query parameters, remote pagination, per-tab filters, and total/page/pageSize metadata instead of fetching all rows into the iframe.
 - View icons use `IconDefinition` object form where supported, with any SDK compatibility cast scoped to the icon field only.
 - Source and test code do not use broad type escape hatches (`as any`, `as unknown as`, `: any`, `: unknown`) except for a deliberately isolated compatibility helper; concrete library, SDK, bridge, and mock types are used instead.
+- User-visible text uses the shared typed i18n facade; maintained components contain no inline locale-to-text branches, catalogs pass key/parameter completeness checks, and locale/platform/third-party mappings stay in explicit adapter boundaries.
 - Assistant template includes required plugins/capabilities and practical starter prompts.
 - Tests cover service behavior, middleware tool calls, manifest/view actions, remote component bridge behavior, and end-to-end user flow.
 - Substantive Workbench UI changes follow the E2E and visual-validation reference: real built assets, semantic UI and host-state assertions, deterministic screenshot evidence when visual behavior matters, and installed-platform validation for platform-dependent integrations.
