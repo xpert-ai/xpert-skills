@@ -24,12 +24,13 @@ Treat 1,000 lines as an architecture-review threshold for maintained source file
 3. Determine whether the plugin provides host server capabilities; if it registers entities, controllers, routes, or equivalent process-global infrastructure, declare it as system level and define its stable artifact namespace before implementing artifact identifiers.
 4. Register the server module, entities, services, middleware, and view provider.
 5. Expose business actions as Agent middleware tools with strict schemas and call order.
-6. Persist reviewable business data with evidence, confidence, status, and failure state.
-7. Add a Workbench or extension view for human review and operational actions.
-8. When the app publishes previews or share links, read [references/artifact-share-links.md](references/artifact-share-links.md) and use the platform Artifacts and Workspace Files capabilities.
-9. Provide an Assistant template so users can create the business assistant in one step.
-10. Build and register the plugin from an independent plugin repository.
-11. Validate with unit, integration, manifest, and end-to-end tests.
+6. When durable background work must keep the current Agent conversation turn alive because proactive completion delivery is unavailable, read [references/agent-long-running-tasks.md](references/agent-long-running-tasks.md) and implement the bounded long-polling bridge.
+7. Persist reviewable business data with evidence, confidence, status, and failure state.
+8. Add a Workbench or extension view for human review and operational actions.
+9. When the app publishes previews or share links, read [references/artifact-share-links.md](references/artifact-share-links.md) and use the platform Artifacts and Workspace Files capabilities.
+10. Provide an Assistant template so users can create the business assistant in one step.
+11. Build and register the plugin from an independent plugin repository.
+12. Validate with unit, integration, manifest, and end-to-end tests.
 
 ## Architecture Checklist
 
@@ -476,6 +477,7 @@ Before finishing, verify:
 - Server module registers entities, services, middleware, and view providers.
 - All plugin entities include `tenantId` and `organizationId`, write paths populate them, and all data reads/mutations are scoped by tenant/organization whenever context is available.
 - Middleware tools have schemas, descriptions, ordered workflow, per-item persistence, failure reporting, and `verboseParsingErrors: true` on every structured tool configuration.
+- Long-running Agent workflows without proactive delivery follow the bounded wait-tool contract, preserve durable recovery, propagate cancellation, and prevent duplicate completion replies.
 - Data model preserves source evidence, confidence, review status, and failure reasons.
 - Workbench manifest declares data source, actions, file actions, host events, and remote component entry when used.
 - Every confirmation uses the designated accessible confirmation primitive; maintained UI source contains no browser-native confirmation calls or generic content-dialog substitutes.
