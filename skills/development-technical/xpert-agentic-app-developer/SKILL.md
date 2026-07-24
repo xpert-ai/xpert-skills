@@ -308,17 +308,7 @@ For remote component data loading, route iframe requests through the platform br
 
 `XpertViewQuery.parameters` only supports scalar values or scalar arrays. Do not send nested filter objects directly from a remote component. Serialize complex filters as a JSON string parameter such as `filtersJson`, parse it in the view provider, and tolerate malformed JSON by falling back to `{}`.
 
-For view icons, prefer the object form supported by recent contracts:
-
-```ts
-const VIEW_ICON = {
-  type: 'svg',
-  value: '<svg ...>',
-  alt: 'Contract Review'
-} satisfies IconDefinition
-```
-
-Use this `IconDefinition` for manifest `icon` and fixed workbench menu icons. If the currently resolved `plugin-sdk` still types those fields as `string`, keep the runtime object icon and use a narrow compatibility cast at the icon assignment rather than weakening the whole manifest type.
+Before adding or changing icons for a Workbench, extension view, or remote component, read and follow [references/remote-view-icons.md](references/remote-view-icons.md).
 
 Manifest essentials:
 
@@ -482,7 +472,6 @@ Before finishing, verify:
 - Workbench manifest declares data source, actions, file actions, host events, and remote component entry when used.
 - Every confirmation uses the designated accessible confirmation primitive; maintained UI source contains no browser-native confirmation calls or generic content-dialog substitutes.
 - Remote component table views use scalar query parameters, remote pagination, per-tab filters, and total/page/pageSize metadata instead of fetching all rows into the iframe.
-- View icons use `IconDefinition` object form where supported, with any SDK compatibility cast scoped to the icon field only.
 - Source and test code do not use broad type escape hatches (`as any`, `as unknown as`, `: any`, `: unknown`) except for a deliberately isolated compatibility helper; concrete library, SDK, bridge, and mock types are used instead.
 - User-visible text uses the shared typed i18n facade; maintained components contain no inline locale-to-text branches, catalogs pass key/parameter completeness checks, and locale/platform/third-party mappings stay in explicit adapter boundaries.
 - Assistant template includes required plugins/capabilities and practical starter prompts.
