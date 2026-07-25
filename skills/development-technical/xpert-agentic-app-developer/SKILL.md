@@ -276,6 +276,8 @@ For substantive Workbench or remote-component changes, treat end-to-end browser 
 
 Test the real generated remote-component assets inside a representative Xpert View Host harness, assert both visible behavior and persisted/host-side state, and capture deterministic screenshots at important interaction states. Never make a failing interaction pass with forced clicks or arbitrary sleeps; diagnose layout, state, or event-ordering defects. Follow simulated-host E2E with an installed-platform browser pass whenever the change depends on authentication, permissions, Workspace Files, cookies/CORS, Managed Queue, Sandbox Runtime, or real plugin registration.
 
+When a Remote View needs a standalone local preview, read [references/remote-view-preview-host.md](references/remote-view-preview-host.md). Use the shared repository-level Preview Host and keep only business fixtures beside the Remote View; do not duplicate the iframe renderer or bridge implementation in each plugin.
+
 ### Confirmation Dialog Standard
 
 Treat confirmation as a dedicated interaction pattern for consequential, destructive, security-sensitive, or irreversible actions. Do not use browser-native dialogs or a generic content modal as a confirmation substitute. Reserve ordinary dialogs for forms, details, previews, and other non-confirmation content.
@@ -476,6 +478,7 @@ Before finishing, verify:
 - User-visible text uses the shared typed i18n facade; maintained components contain no inline locale-to-text branches, catalogs pass key/parameter completeness checks, and locale/platform/third-party mappings stay in explicit adapter boundaries.
 - Assistant template includes required plugins/capabilities and practical starter prompts.
 - Tests cover service behavior, middleware tool calls, manifest/view actions, remote component bridge behavior, and end-to-end user flow.
+- Standalone Remote View previews use the shared Preview Host, real generated assets, and a plugin-owned fixture without credentials or production data.
 - Substantive Workbench UI changes follow the E2E and visual-validation reference: real built assets, semantic UI and host-state assertions, deterministic screenshot evidence when visual behavior matters, and installed-platform validation for platform-dependent integrations.
 - Local deployment uses `plugin:deploy:local`, preserves credentials outside logs and repositories, and verifies the loaded plugin descriptor.
 - Optional MCP surfaces, when explicitly requested, are validated separately with the dedicated plugin development MCP checklist.
