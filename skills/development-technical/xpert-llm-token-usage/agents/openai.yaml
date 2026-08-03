@@ -1,0 +1,4 @@
+interface:
+  display_name: "Xpert LLM Token Usage"
+  short_description: "Normalize and verify LLM Token accounting"
+  default_prompt: "Use $xpert-llm-token-usage to diagnose or implement consistent LLM Token usage across Xpert model plugins and the host."
