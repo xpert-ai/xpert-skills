@@ -29,7 +29,7 @@ Treat 1,000 lines as an architecture-review threshold for maintained source file
 1. Identify the plugin type first: general tool plugin, model plugin, integration plugin, middleware plugin, skill-only plugin, plugin-managed MCP server, or MCP App plugin.
 2. Discover the actual local paths for the plugin repository, the target plugin directory, and the platform backend before running commands.
 3. Read `references/general.md` for repository layout, install flow, test flow, versioning, and PR rules.
-4. If the task creates, changes, or reviews model-visible/plugin-callable Middleware or MCP tools, read `references/tool-contract-design.md` for strict Zod inputs, DTO outputs, progressive disclosure, pagination, scope, concurrency, and test rules.
+4. If the task creates, changes, or reviews model-visible/plugin-callable Middleware or MCP tools, read `references/tool-contract-design.md` for strict Zod inputs, DTO outputs, progressive disclosure, pagination, scope, draft revision/conflict handling, and test rules.
 5. If the task is about model providers, yaml, assets, or packaging, also read `references/model-plugins.md`.
 6. If the task is about callbacks, bindings, notifications, or third-party platform connectivity, also read `references/integration-middleware.md`.
 7. If the task is about plugin background jobs, BullMQ, delayed/retry jobs, Redis queue state, or multi-tenant queue isolation, also read `references/managed-queue.md`.

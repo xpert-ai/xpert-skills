@@ -11,9 +11,10 @@ Use these rules whenever creating or reviewing Xpert Agent middleware tools, nor
 5. [Disclose data progressively](#disclose-data-progressively)
 6. [Paginate collections at the data source](#paginate-collections-at-the-data-source)
 7. [Preserve scope, authorization, and concurrency](#preserve-scope-authorization-and-concurrency)
-8. [Model long-running work as jobs](#model-long-running-work-as-jobs)
-9. [Annotate effects and visibility](#annotate-effects-and-visibility)
-10. [Test the contract](#test-the-contract)
+8. [Design revisioned draft mutations](#design-revisioned-draft-mutations)
+9. [Model long-running work as jobs](#model-long-running-work-as-jobs)
+10. [Annotate effects and visibility](#annotate-effects-and-visibility)
+11. [Test the contract](#test-the-contract)
 
 ## Choose the correct tool surface
 
@@ -50,7 +51,7 @@ Treat the tool schema as an untrusted-boundary contract, not as documentation on
 7. Validate cross-field invariants with `.refine()` or `.superRefine()`: `end > start`, mutually exclusive selectors, compatible modes, matching revisions, and conditional required fields.
 8. Keep context-derived security fields out of model input. Resolve tenant, organization, user, workspace, Xpert, conversation, roles, tokens, and credentials from the authenticated runtime.
 9. Resolve an omitted current business ID from trusted Workbench/runtime context before handler execution, then validate the resolved value. Return an actionable error when no unambiguous current object exists.
-10. Require `baseRevision` or an equivalent compare-and-swap token for mutations. Allow `expectedRevision` on multi-step reads so an Agent can reject stale planning data.
+10. Include `baseRevision` or an equivalent compare-and-swap token when a mutation is planned from prior state. For service-owned current-draft tools, accept `baseRevision` as audit/planning context while the service still reads the authoritative current revision and writes through compare-and-swap. Allow `expectedRevision` on multi-step reads so an Agent can reject stale planning data.
 11. Accept files through the platform's runtime file descriptor or portable file-reference contract. Do not accept base64 blobs, host filesystem paths, publicized internal URLs, or caller-supplied volume scope fields.
 12. Set `verboseParsingErrors: true` on every LangChain structured tool so invalid model arguments return actionable validation details.
 13. Keep MCP `inputSchema` equally strict and bounded. When declaring `outputSchema`, keep it aligned with the actual `structuredContent` DTO.
@@ -148,9 +149,26 @@ Do not make `get_project` return the complete timeline, every media record, ever
 2. Treat MCP identity according to the Toolset/runtime session contract. Never trust model-provided tenant or user IDs as authorization evidence.
 3. Scope every query by tenant and organization before business IDs. Verify the resource relationship and permission again in the handler/service; a valid UUID is not authorization.
 4. Keep internal paths/references server-side. Return an approved grant, artifact, or other purpose-specific handle only when the user-facing operation needs it.
-5. Require optimistic concurrency on mutations and return a stable conflict code plus the current revision. Never silently rebase or overwrite.
+5. Require optimistic concurrency on mutations and return a stable conflict code plus the current revision. Do not let the model silently overwrite or rebase state.
 6. Normalize not-found, unauthorized, expired, and cross-scope failures when revealing existence would leak data.
 7. Require explicit confirmation or the platform HITL mechanism for destructive, externally visible, financial, publication, or sharing actions.
+
+## Design revisioned draft mutations
+
+Use this pattern for Agent tools that edit drafts, semantic models, configuration documents, design canvases, or other user-reviewable resources.
+
+1. Let the Agent express intent while the service owns revision, concurrency, validation, and persistence. Prefer high-level intent tools such as `add_measure`, `configure_relationship`, or `update_step` over model-authored whole-document saves.
+2. Expose a small workflow: `get_*_context` for current revision, object indexes, counts, validation summary, and busy state; `get_*_schema` or `get_*_capabilities` before referencing new fields/actions; narrow intent mutation tools for common changes; raw patch only as a fallback for unsupported edits.
+3. Put `targetId`, optional `operationId`, optional `baseRevision`, and bounded `changeSummary` on every draft mutation. Resolve omitted current target IDs only from trusted Workbench/runtime state.
+4. Treat `baseRevision` as planning context and audit evidence, not as a model-owned lock. The service should read the current authoritative draft when applying the mutation.
+5. Make `operationId` idempotent. Store the compact mutation receipt for the last or relevant operation IDs; if the same operation is retried, return the stored receipt instead of applying the change again.
+6. Apply the mutation as the smallest deterministic delta. Avoid replacing the full draft when the intent only adds or updates one field, item, relationship, or visibility flag.
+7. For JSON Patch-like raw deltas, require every `replace` or `remove` to have an immediately preceding `test` for the same path. High-level intent tools should generate those guards internally for destructive field updates.
+8. Persist through compare-and-swap: read current draft, apply the delta, validate the resulting draft, save only if the stored revision still matches, and return a compact receipt with `revision`, changed paths/object IDs, operation count, validation summary, and stable conflict/busy codes.
+9. Allow at most one service-owned safe rebase when the delta is guarded, idempotent, and scoped to a small intent. Report `rebasedFromRevision` or an equivalent field in the receipt. Do not let the Agent loop indefinitely; after a failed precondition or busy draft, re-read context and retry at most once.
+10. Choose the draft write strategy by the plugin's existing collaboration substrate. If the plugin already implements Yjs/CRDT collaborative editing, represent Agent changes through the same collaboration protocol: presence/focus, CRDT operations, remote-change merge, materialization, and existing conflict policy. If the plugin does not already use Yjs/CRDT, use the simplest server-draft strategy: let Agent mutations write the authoritative server draft directly and supersede browser-local or autosave drafts without checking whether the frontend has saved. Do not add locks, leases, or unsaved-draft gates solely for Agent edits. Still use `operationId`, guarded deltas, compare-and-swap, validation, and compact receipts; surface conflicts only for guarded precondition failures, genuine server busy states, authorization failures, or validation failures.
+11. Emit running/success/fail events for every user-visible mutation that has `changeSummary`. Serialize writes per target resource when multiple tool calls can mutate the same draft, and let the Workbench refresh only after mutation success.
+12. Keep mutation results compact. Return receipts and diagnostics, not the full draft. Provide explicit read tools for a refreshed summary, item details, or paged content.
 
 ## Model long-running work as jobs
 
@@ -181,8 +199,9 @@ Cover at least:
 8. response-size behavior: a summary and one page must not grow linearly with the complete project/resource graph
 9. read-only tools do not mutate or emit mutation refresh events
 10. mutation idempotency, conflicts, audit records, and compact receipts
-11. MCP `tools/list`, annotations, visibility, `structuredContent`, output schema, and app-only access enforcement
-12. actionable LangChain parsing errors with `verboseParsingErrors: true`
+11. revisioned draft behavior: guarded destructive patches, one safe service-owned rebase, duplicate `operationId` handling, stale preconditions, busy drafts, CRDT-backed Agent operations when collaboration already exists, direct server-draft overwrite when it does not, and Workbench refresh events
+12. MCP `tools/list`, annotations, visibility, `structuredContent`, output schema, and app-only access enforcement
+13. actionable LangChain parsing errors with `verboseParsingErrors: true`
 
 Reject these anti-patterns during review:
 
