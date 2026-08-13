@@ -270,6 +270,8 @@ Add a Workbench view when users must review, correct, approve, reject, upload fi
 
 For React remote component views, prefer TSX as the default development mode. Implement the view as maintainable React TypeScript source, preferably `remote-components/<entry>/src/main.tsx` plus supporting `*.ts`/`*.tsx` files, and generate the iframe entry `app.js` through a repeatable build step such as esbuild. Do not hand-maintain a large `React.createElement` `app.js` as the source of truth unless the user explicitly asks for a no-build static script or the existing plugin already has a deliberate no-build convention. Keep the generated `app.js` only as the runtime artifact read by `renderRemoteReactIframeHtml`, and wire `build`, `typecheck` or an equivalent check so stale generated output is caught.
 
+For every React Remote View that uses the shared shadcn package or Tailwind semantic color utilities, read [references/shadcn-ui.md](references/shadcn-ui.md) before implementation. Treat host theme installation as a runtime contract: load the shared stylesheet, map host `--xui-*` tokens to shadcn semantic variables through the shared installer, propagate density, keep the documented CSS fallback, and verify computed styles in the installed host iframe.
+
 When a Remote View calls `invokeClientCommand`, read [references/view-client-commands.md](references/view-client-commands.md) before implementation. Treat command availability as a closed capability protocol: allowlist the exact key in the View manifest `clientCommands`, register the handler in every intended host surface, invoke it through the remote bridge, consume structured failure results, and verify the real click path in an installed host. Host handler registration alone never grants a View permission to invoke the command.
 
 ### Workbench E2E and Visual Validation
@@ -476,6 +478,7 @@ Before finishing, verify:
 - Long-running Agent workflows without proactive delivery follow the bounded wait-tool contract, preserve durable recovery, propagate cancellation, and prevent duplicate completion replies.
 - Data model preserves source evidence, confidence, review status, and failure reasons.
 - Workbench manifest declares data source, actions, file actions, host events, and remote component entry when used.
+- Every shadcn/Tailwind Remote View follows the host theme bridge contract: the entry loads the shared stylesheet, installs semantic theme variables after host tokens, propagates density, retains the documented border fallback, and passes installed-iframe computed-style checks for `--xui-color-border`, `--border`, `--input`, `--ring`, and representative borders.
 - Every Remote View `invokeClientCommand` key is declared in that View manifest's `clientCommands` allowlist and is registered by every intended host surface; tests cover both undeclared-command rejection and successful dispatch.
 - `workbench.navigation.open` targets declare and consume the required query contract, preserve scalar `selectionId` and `parameters`, resolve local versus host-composed View keys deliberately, and pass an installed-platform click-through test.
 - Every confirmation uses the designated accessible confirmation primitive; maintained UI source contains no browser-native confirmation calls or generic content-dialog substitutes.

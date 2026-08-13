@@ -24,6 +24,83 @@ Each skill is self-contained in its own folder with a `SKILL.md` file containing
 - [./spec](./spec): The Agent Skills specification
 - [./template](./template): Skill template
 
+# Installing Skills
+
+## Install with the Skills CLI (Recommended)
+
+With Node.js installed, use the [`skills`](https://github.com/vercel-labs/skills) CLI to discover and install skills from this repository. The CLI supports Codex, Claude Code, Cursor, and many other agents.
+
+List the available skills without installing them:
+
+```bash
+npx skills add xpert-ai/xpert-skills --list
+```
+
+Start an interactive installation and select the skills and target agents:
+
+```bash
+npx skills add xpert-ai/xpert-skills
+```
+
+Install a specific skill for Codex in the current project:
+
+```bash
+npx skills add xpert-ai/xpert-skills \
+  --skill xpert-plugin-development \
+  --agent codex
+```
+
+Install a specific skill globally so it is available in every project:
+
+```bash
+npx skills add xpert-ai/xpert-skills \
+  --skill xpert-plugin-development \
+  --agent codex \
+  --global
+```
+
+Install all skills for a specific agent:
+
+```bash
+npx skills add xpert-ai/xpert-skills \
+  --skill '*' \
+  --agent codex
+```
+
+Replace `codex` with another supported agent identifier, such as `claude-code` or `cursor`. Project installation is the default; use `--global` (or `-g`) for a user-level installation. Add `--yes` (or `-y`) for non-interactive environments, and add `--copy` when symbolic links are not supported.
+
+To install from a local clone while developing or testing a skill:
+
+```bash
+git clone https://github.com/xpert-ai/xpert-skills.git
+cd xpert-skills
+npx skills add . --skill xpert-plugin-development --agent codex
+```
+
+## Install Manually
+
+Clone this repository, then copy the complete skill directory into the target agent's skills directory. Keep `SKILL.md` together with any referenced `scripts/`, `references/`, and `assets/` directories.
+
+Common installation locations are:
+
+| Agent | Project installation | Global installation |
+| --- | --- | --- |
+| Codex | `.agents/skills/<skill-name>/` | `~/.codex/skills/<skill-name>/` |
+| Claude Code | `.claude/skills/<skill-name>/` | `~/.claude/skills/<skill-name>/` |
+| Cursor | `.agents/skills/<skill-name>/` | `~/.cursor/skills/<skill-name>/` |
+
+For example, to install `xpert-plugin-development` globally for Codex:
+
+```bash
+git clone https://github.com/xpert-ai/xpert-skills.git
+mkdir -p ~/.codex/skills
+cp -R \
+  xpert-skills/skills/development-technical/xpert-plugin-development \
+  ~/.codex/skills/
+```
+
+Restart the agent or start a new session if the newly installed skill is not discovered immediately.
+
 # Creating a Basic Skill
 
 Skills are simple to create - just a folder with a `SKILL.md` file containing YAML frontmatter and instructions. You can use the **template-skill** in this repository as a starting point:
