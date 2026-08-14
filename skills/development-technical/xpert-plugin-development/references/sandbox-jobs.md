@@ -39,8 +39,8 @@ Use these terms and owners consistently:
 | Browser Runtime | Platform | Declare compatible Runtime/Playwright requirements |
 | Runtime Definition | OSS Runtime Suite | Reference its stable profile name only from Action manifest |
 | Runtime Binding | Runtime Provider | Map a Definition to a Provider-owned immutable artifact |
-| Runtime Provider SPI | OSS Plugin SDK | Implement only for system-level infrastructure plugins |
-| Sandbox Action Bundle | System plugin | Build and publish deterministic business runtime files |
+| Runtime Provider SPI | OSS Plugin SDK | Implement only for system-level infrastructure plugins (`system` or `tenant`) |
+| Sandbox Action Bundle | System-level plugin (`system` or `tenant`) | Build and publish deterministic business runtime files |
 | Sandbox Job | Platform Runtime | Invoke by Action name/version from a background handler |
 
 Hard rules:
@@ -79,7 +79,7 @@ When reviewing platform code, use `SandboxActionRegistry`, `SandboxRuntimeDefini
 
 ## Declare an Action
 
-Only system-level plugins may declare executable Sandbox Actions in v1.
+Only system-level plugins with `meta.level` set to `system` or `tenant` may declare executable Sandbox Actions in v1. An `organization` plugin may not declare them.
 
 Build the Action under the plugin's `dist` tree:
 
@@ -323,7 +323,7 @@ export class PodmanRuntimeProvider implements ISandboxRuntimeProvider {
 
 Provider requirements:
 
-1. Package as `private: true`, `xpert.plugin.level=system`; organization-level registration is rejected.
+1. Package as `private: true`. Use `xpert.plugin.level=system` for a Default-only Provider or `xpert.plugin.level=tenant` when the Provider must be installable in another tenant; organization-level registration is rejected.
 2. Keep Runtime Definitions provider-neutral. Declare artifact choice only through `listBindings()`.
 3. Accept only Core-provided Definition, Binding, resource/security policy, Job scope, and volume roots. Never accept plugin command/image/environment.
 4. Return a Runtime instance with `workspaceRoot`, file upload/download, fixed argv execution, optional termination, and stable `id`/`runtimeRef`.
@@ -351,7 +351,7 @@ Diagnose from outer to inner layers:
 | `PROFILE_MISSING` | Runtime Definition Catalog contains the Action's profile |
 | `VERSION_MISMATCH` | Action contract and Playwright versions match the Definition |
 | `PROFILE_UNHEALTHY` | Artifact exists, immutable lock is valid, manifest/security checks pass, warm-up completed |
-| `ACTION_MISSING` / `ACTION_INVALID` | System plugin package contains the declared manifest and exact bundle hash |
+| `ACTION_MISSING` / `ACTION_INVALID` | System-level plugin package (`system` or `tenant`) contains the declared manifest and exact bundle hash |
 
 Do not “fix” health by downloading a browser into the API container or mounting the plugin directory into a Runtime.
 

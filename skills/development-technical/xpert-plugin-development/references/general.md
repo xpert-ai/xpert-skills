@@ -34,10 +34,32 @@ Typical plugin structure:
 ├── tsconfig.spec.json
 ├── jest.config.ts
 ├── README.md
+├── docs/
+│   ├── docs.json
+│   ├── AGENTS.md
+│   └── ...
 └── src/
     ├── index.ts
     └── lib/
 ```
+
+## Default Mintlify documentation package
+
+Create a Mintlify documentation package during the initial plugin scaffold. From the new plugin root, run:
+
+```bash
+mint new docs
+```
+
+Apply these rules:
+
+1. Create `docs/` in the same initialization task as `package.json` and `src/`; do not postpone documentation setup until the first documentation request.
+2. Treat `docs/` as the default home for the plugin's architecture, setup, configuration, usage, operations, verification, and troubleshooting documentation.
+3. Preserve the Mintlify project structure, including a valid `docs/docs.json`, generated Agent instructions, ignore rules, pages, and assets that remain useful. Customize the project name, branding, navigation, and starter pages for the plugin instead of leaving unrelated starter content.
+4. If `docs/` already exists, do not rerun `mint new`, pass `--force`, or replace existing pages and assets. Validate the existing Mintlify project and extend it in place.
+5. When `package.json` uses a `files` allowlist, include `"docs"` so the documentation package is not omitted from the published plugin artifact.
+6. Keep the root `README.md` as a concise package overview and link it to the detailed pages under `docs/`.
+7. Before finishing initialization, parse `docs/docs.json`, confirm every configured navigation page resolves to an existing document included in the intended change, and run the repository's bounded Mintlify validation or preview smoke test when available.
 
 ## Metadata and package requirements
 
@@ -45,25 +67,43 @@ Typical plugin structure:
 2. `src/index.ts` should export the plugin as default.
 3. `meta.name` and `package.json.name` must match.
 4. `meta.version` and `package.json.version` must match.
-5. `config.schema` must be valid for both UI rendering and server validation.
+5. `meta.level` must be explicit, use one of `system`, `tenant`, or `organization`, and match every package or bundle metadata surface.
+6. `config.schema` must be valid for both UI rendering and server validation.
 
-### System-level plugins and artifact namespaces
+### Plugin levels, installation scopes, and artifact namespaces
+
+Select the level before implementing or installing the plugin:
+
+| `meta.level` | Runtime class | Allowed installation scope |
+| --- | --- | --- |
+| `system` | System-level | Tenant scope in the Default tenant only |
+| `tenant` | System-level | Tenant scope in its owning tenant, including non-Default tenants |
+| `organization` | Non-system-level | Organization scope |
+
+Apply these selection rules:
+
+1. Use `system` only when the plugin must be restricted to the Default tenant.
+2. Use `tenant` when a system-level plugin must be installable in another tenant.
+3. Use `organization` only when the plugin does not register process-global host infrastructure and can remain isolated to one organization.
+4. Install both `system` and `tenant` plugins with tenant scope and no organization scope. Install `organization` plugins with organization scope.
+5. Do not use request headers or CLI scope to reinterpret a mismatched declared level. Fix the metadata instead.
 
 Apply these rules whenever a plugin uses or provides host server capabilities such as TypeORM entities, controllers, server modules, routes, or equivalent process-global infrastructure:
 
-1. Declare the plugin as system level with `meta.level: 'system'`.
+1. Declare the plugin as system-level with `meta.level: 'system'` for Default-only installation or `meta.level: 'tenant'` when it must be installable in another tenant. Never use `organization`.
 2. Declare a stable `meta.artifactNamespace`. Use only lowercase letters, numbers, and underscores (`^[a-z0-9_]+$`). Do not depend on namespace derivation from the package name; that behavior is compatibility-only.
-3. Keep the namespace identical in every published metadata surface that exists for the plugin: runtime `XpertPlugin.meta.artifactNamespace`, `package.json` field `xpert.plugin.artifactNamespace` used by install preflight, and `.xpertai-plugin/plugin.json` or `plugin.json` bundle metadata. The host may read the legacy top-level `package.json.artifactNamespace` only as a compatibility fallback; new and maintained plugins must not declare both package locations. A mismatch must be treated as an installation error.
+3. Keep both level and namespace identical in every published metadata surface that exists for the plugin: runtime `XpertPlugin.meta.level` / `artifactNamespace`, `package.json` fields `xpert.plugin.level` / `artifactNamespace` used by install preflight, and `.xpertai-plugin/plugin.json` or `plugin.json` bundle metadata. The host may read the legacy top-level `package.json.artifactNamespace` only as a compatibility fallback; new and maintained plugins must not declare both package locations. Treat any mismatch as an installation error.
 4. Choose the namespace once and keep it stable after release. Changing it changes artifact ownership and may require an explicit data and identifier migration.
 5. Define one exported namespace constant and derive plugin-owned artifact identifiers from it. Do not repeat a literal prefix throughout entities, controllers, providers, views, queues, registries, cache keys, or persisted references.
 6. Prefix every platform-global or persisted plugin artifact identifier. Use the separator required by that contract: database tables use `plugin_<artifactNamespace>_<tableKey>`; route prefixes and registry keys may use `/`, `.`, or `:` while still including the same namespace.
 7. Do not double-prefix identifiers that the platform contract already namespaces automatically. Document that boundary and test the final resolved identifier instead.
 
-Prefer the SDK table-name helper and a small helper for other identifiers:
+Prefer the SDK table-name helper and a small helper for other identifiers. This example uses `tenant` because the system-level plugin is intended to be installable outside the Default tenant; use `system` for a Default-only plugin:
 
 ```ts
 import { pluginArtifactTableName } from '@xpert-ai/plugin-sdk'
 
+export const PLUGIN_INSTALL_LEVEL = 'tenant' as const
 export const PLUGIN_ARTIFACT_NAMESPACE = 'contract_review' as const
 
 export const pluginArtifactKey = (localKey: string) =>
@@ -84,7 +124,7 @@ const plugin: XpertPlugin = {
   meta: {
     name: '@acme/plugin-contract-review',
     version: '0.1.0',
-    level: 'system',
+    level: PLUGIN_INSTALL_LEVEL,
     artifactNamespace: PLUGIN_ARTIFACT_NAMESPACE
   },
   // ...
@@ -93,11 +133,12 @@ const plugin: XpertPlugin = {
 
 Validate before deployment:
 
-1. Assert `meta.level === 'system'` and `meta.artifactNamespace === PLUGIN_ARTIFACT_NAMESPACE`.
-2. Assert package or bundle namespace metadata equals runtime metadata.
-3. Enumerate registered TypeORM entities and verify every physical table name starts with `plugin_<artifactNamespace>_`.
-4. Verify controller routes and every process-global or persisted provider, view, queue, registry, cache, and artifact key contain the namespace through the shared helper.
-5. Rebuild the package and confirm the emitted entrypoint still contains the explicit namespace declaration.
+1. Assert `meta.level === PLUGIN_INSTALL_LEVEL` and that the intended installation scope is valid for that level.
+2. For a plugin with process-global host infrastructure, assert the level is `system` or `tenant` and `meta.artifactNamespace === PLUGIN_ARTIFACT_NAMESPACE`.
+3. Assert package or bundle level and namespace metadata equal runtime metadata.
+4. Enumerate registered TypeORM entities and verify every physical table name starts with `plugin_<artifactNamespace>_`.
+5. Verify controller routes and every process-global or persisted provider, view, queue, registry, cache, and artifact key contain the namespace through the shared helper.
+6. Rebuild the package and confirm the emitted entrypoint still contains the explicit level and namespace declarations.
 
 Required build outputs:
 
@@ -118,19 +159,21 @@ Important TypeScript setting:
 
 Preferred path:
 
-1. build locally
-2. install into the running local platform through `POST /api/plugin`
-3. use `source=code + workspacePath`
+1. read the declared `meta.level` and matching `xpert.plugin.level`
+2. select the required tenant or organization installation scope
+3. build locally
+4. install into the running local platform through `POST /api/plugin`
+5. use `source=code + workspacePath`
 
 Before running commands, discover these values from the local environment:
 
 1. `<plugin-repo-root>`
 2. `<plugin-relative-path>`
 3. `<platform-api-base-url>`
-4. `<tenant-id>`
-5. `<organization-id>`
+4. `<tenant-id>` for every tenant-scoped installation and when required by organization scope
+5. `<organization-id>` only for an `organization` plugin
 
-Template:
+Tenant-scope template for a `system` or `tenant` plugin:
 
 ```bash
 PLUGIN_NAME="@xpert-ai/plugin-<name>"
@@ -140,7 +183,7 @@ PLUGIN_LOAD_VERSION="$(date +%Y%m%d%H%M%S)"
 curl -sS -X POST <platform-api-base-url>/api/plugin \
   -H "Authorization: Bearer $TOKEN" \
   -H "tenant-id: $TENANT_ID" \
-  -H "organization-id: $ORG_ID" \
+  -H "x-scope-level: tenant" \
   -H "Content-Type: application/json" \
   --data "{
     \"pluginName\":\"$PLUGIN_NAME\",
@@ -152,25 +195,43 @@ curl -sS -X POST <platform-api-base-url>/api/plugin \
   }"
 ```
 
-Verify:
+For an `organization` plugin, use the same request body with organization-scope headers:
+
+```bash
+-H "tenant-id: $TENANT_ID" \
+-H "organization-id: $ORG_ID" \
+-H "x-scope-level: organization"
+```
+
+Use the same scope headers for verification:
 
 ```bash
 curl -sS -X POST <platform-api-base-url>/api/plugin/by-names \
   -H "Authorization: Bearer $TOKEN" \
   -H "tenant-id: $TENANT_ID" \
-  -H "organization-id: $ORG_ID" \
+  -H "x-scope-level: tenant" \
   -H "Content-Type: application/json" \
   --data "{\"names\":[\"$PLUGIN_NAME\"]}"
 ```
+
+The verification example above is tenant-scoped. Replace its scope headers with the organization-scope set when verifying an `organization` plugin.
 
 ## Automated local deployment
 
 Prefer the platform-owned deployment command when `<platform-root>/package.json` exposes `plugin:deploy:local`:
 
 ```bash
+# meta.level is system or tenant
 cd <platform-root>
 corepack pnpm plugin:deploy:local \
   --plugin-dir <plugin-repo-root>/<plugin-relative-path> \
+  --scope tenant \
+  --tenant-id "$XPERT_TENANT_ID"
+
+# meta.level is organization
+corepack pnpm plugin:deploy:local \
+  --plugin-dir <plugin-repo-root>/<plugin-relative-path> \
+  --scope organization \
   --org-id "$XPERT_ORG_ID"
 ```
 
@@ -187,16 +248,22 @@ Useful options:
 
 ```bash
 # Validate the plan without mutation; credentials are optional in dry-run mode.
-corepack pnpm plugin:deploy:local --plugin-dir <plugin-dir> --org-id <org-id> --dry-run
+corepack pnpm plugin:deploy:local --plugin-dir <plugin-dir> --scope tenant --tenant-id <tenant-id> --dry-run
 
 # Reuse prior validation when the build and tests already passed in the same task.
-corepack pnpm plugin:deploy:local --plugin-dir <plugin-dir> --org-id <org-id> --skip-build --skip-test
+corepack pnpm plugin:deploy:local --plugin-dir <plugin-dir> --scope tenant --tenant-id <tenant-id> --skip-build --skip-test
 
 # Replace a marketplace or stale registration with a local source-code registration.
-corepack pnpm plugin:deploy:local --plugin-dir <plugin-dir> --org-id <org-id> --force-install
+corepack pnpm plugin:deploy:local --plugin-dir <plugin-dir> --scope organization --org-id <org-id> --force-install
 ```
 
-Use `--scope tenant` for tenant scope. When username/password login is used, the command may infer the tenant from the authenticated user response; `--tenant-id <id>` remains available for an explicit override. Organization scope still requires `--org-id <id>` or `XPERT_ORG_ID`. Do not guess organization identifiers; discover them from the local environment or ask the user for the non-secret identifier.
+Select scope from the declared level instead of from whichever identifier happens to be available:
+
+1. For `system`, use `--scope tenant`, target the Default tenant, and omit `--org-id`.
+2. For `tenant`, use `--scope tenant`, target the owning tenant, and omit `--org-id`.
+3. For `organization`, use `--scope organization` and provide `--org-id <id>` or `XPERT_ORG_ID`.
+
+When username/password login is used, the command may infer the tenant from the authenticated user response; `--tenant-id <id>` remains available for an explicit override. Do not guess tenant or organization identifiers; discover the non-secret identifier from the local environment or ask the user.
 
 ## Authentication and missing-credentials procedure
 
