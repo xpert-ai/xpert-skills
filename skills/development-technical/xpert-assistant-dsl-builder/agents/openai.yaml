@@ -1,0 +1,4 @@
+interface:
+  display_name: "Xpert Assistant DSL Builder"
+  short_description: "Build, validate, and diagnose Xpert Assistant YAML DSL graphs"
+  default_prompt: "Use $xpert-assistant-dsl-builder to design and validate this Xpert Assistant YAML DSL graph."

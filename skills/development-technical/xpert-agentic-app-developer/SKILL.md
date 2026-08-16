@@ -1,6 +1,6 @@
 ---
 name: xpert-agentic-app-developer
-description: Develop custom Agentic Apps on the Xpert platform as independent plugins, with a primary focus on extension views, Workbench views, remote components, Agent middleware tools, server modules, data models, Assistant templates, targetAppMeta capabilities, secure local plugin deployment, and production plugin packaging.
+description: Develop custom Agentic Apps on the Xpert platform as independent plugins, including extension and Workbench views, remote components, Agent middleware tools, capability and role boundaries, middleware-to-view binding, server modules, data models, Assistant templates, secure local deployment, and production packaging.
 ---
 
 # Xpert Agentic App Developer
@@ -13,6 +13,8 @@ Do not confuse **Agent middleware tools** with workflow **Agent Tool** nodes. In
 
 The primary UI path for this skill is an Xpert extension view: a Workbench view manifest plus a remote component or platform-rendered view. If a task is primarily about plugin-managed MCP tools or MCP Apps, use the dedicated Xpert plugin development MCP guidance instead; this skill only mentions that path as an optional integration surface.
 
+When designing or refactoring middleware responsibilities, View capability gates, Assistant composition, or the relationship between human and Agent roles, read [references/middleware-view-role-boundaries.md](references/middleware-view-role-boundaries.md) before implementing.
+
 ## Golden Principle: Review Files Over 1,000 Lines
 
 Treat 1,000 lines as an architecture-review threshold for maintained source files. When a code file exceeds 1,000 lines, pause before adding more behavior and assess whether it combines multiple responsibilities. Split coherent responsibilities into focused files when clear boundaries exist, while preserving explicit ownership, stable public contracts, and test coverage. Do not mechanically fragment a cohesive file merely to satisfy the line count.
@@ -22,15 +24,16 @@ Treat 1,000 lines as an architecture-review threshold for maintained source file
 1. Inspect the target plugin repository and the host app conventions before editing.
 2. Define the business loop: what the Agent automates, what humans review, and what the system persists.
 3. Determine whether the plugin provides host server capabilities; if it registers entities, controllers, routes, or equivalent process-global infrastructure, declare it as system level and define its stable artifact namespace before implementing artifact identifiers.
-4. Register the server module, entities, services, middleware, and view provider.
-5. Expose business actions as Agent middleware tools with strict schemas and call order.
-6. When durable background work must keep the current Agent conversation turn alive because proactive completion delivery is unavailable, read [references/agent-long-running-tasks.md](references/agent-long-running-tasks.md) and implement the bounded long-polling bridge.
-7. Persist reviewable business data with evidence, confidence, status, and failure state.
-8. Add a Workbench or extension view for human review and operational actions.
-9. When the app publishes previews or share links, read [references/artifact-share-links.md](references/artifact-share-links.md) and use the platform Artifacts and Workspace Files capabilities.
-10. Provide an Assistant template so users can create the business assistant in one step.
-11. Build and register the plugin from an independent plugin repository.
-12. Validate with unit, integration, manifest, and end-to-end tests.
+4. Define domain capability boundaries and map middleware, Views, Agent roles, and human authority according to [references/middleware-view-role-boundaries.md](references/middleware-view-role-boundaries.md).
+5. Register the server module, entities, services, middleware, and view provider.
+6. Expose business actions as Agent middleware tools with strict schemas and call order.
+7. When durable background work must keep the current Agent conversation turn alive because proactive completion delivery is unavailable, read [references/agent-long-running-tasks.md](references/agent-long-running-tasks.md) and implement the bounded long-polling bridge.
+8. Persist reviewable business data with evidence, confidence, status, and failure state.
+9. Add a Workbench or extension view for human review and operational actions.
+10. When the app publishes previews or share links, read [references/artifact-share-links.md](references/artifact-share-links.md) and use the platform Artifacts and Workspace Files capabilities.
+11. Provide an Assistant template so users can create the business assistant in one step.
+12. Build and register the plugin from an independent plugin repository.
+13. Validate with unit, integration, manifest, and end-to-end tests.
 
 ## Architecture Checklist
 
@@ -473,6 +476,7 @@ Before finishing, verify:
 - Plugin metadata declares `targetApps`, `targetAppMeta`, business types, and capabilities.
 - SDK dependency is a peer dependency.
 - Server module registers entities, services, middleware, and view providers.
+- Every domain tool has exactly one owning middleware; middleware tool sets are disjoint unless an explicitly tested shared platform tool is intentional. Views are gated by the owning Feature, and Assistant roles receive only directly connected capabilities.
 - All plugin entities include `tenantId` and `organizationId`, write paths populate them, and all data reads/mutations are scoped by tenant/organization whenever context is available.
 - Middleware tools have schemas, descriptions, ordered workflow, per-item persistence, failure reporting, and `verboseParsingErrors: true` on every structured tool configuration.
 - Long-running Agent workflows without proactive delivery follow the bounded wait-tool contract, preserve durable recovery, propagate cancellation, and prevent duplicate completion replies.
