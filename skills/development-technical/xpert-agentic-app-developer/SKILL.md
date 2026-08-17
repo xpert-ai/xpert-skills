@@ -285,7 +285,7 @@ Test the real generated remote-component assets inside a representative Xpert Vi
 
 When installed-platform browser interaction involves Shadow DOM, nested or cross-origin iframes, React-controlled `contenteditable`, unreliable locators, or repeated click/type failures, read [references/layered-browser-interaction.md](references/layered-browser-interaction.md). Escalate through DOM and frame boundaries deliberately, preserve the host page and bridge context, and verify an observable postcondition after every action.
 
-When a Remote View needs a standalone local preview, read [references/remote-view-preview-host.md](references/remote-view-preview-host.md). Use the shared repository-level Preview Host and keep only business fixtures beside the Remote View; do not duplicate the iframe renderer or bridge implementation in each plugin.
+When designing, reviewing, or accepting an interactive Remote View prototype, read [references/prototype-as-production-remote-view.md](references/prototype-as-production-remote-view.md) and follow it as a development standard. Build the prototype in the maintained production TSX with the real shared shadcn UI package, Tailwind, host theme bridge, and generated assets; use the shared Preview Host plus a plugin-owned fixture only as the replaceable business adapter, never a disposable native HTML/CSS implementation or preview-specific branch in business components. Read [references/remote-view-preview-host.md](references/remote-view-preview-host.md) for the harness contract.
 
 ### Confirmation Dialog Standard
 
@@ -493,7 +493,7 @@ Before finishing, verify:
 - User-visible text uses the shared typed i18n facade; maintained components contain no inline locale-to-text branches, catalogs pass key/parameter completeness checks, and locale/platform/third-party mappings stay in explicit adapter boundaries.
 - Assistant template includes required plugins/capabilities and practical starter prompts.
 - Tests cover service behavior, middleware tool calls, manifest/view actions, remote component bridge behavior, and end-to-end user flow.
-- Standalone Remote View previews use the shared Preview Host, real generated assets, and a plugin-owned fixture without credentials or production data.
+- Interactive Remote View prototypes follow the prototype-as-production standard: one maintained TSX/shadcn/Tailwind implementation and one generated asset set serve preview and production; only the typed Preview Fixture versus real View Provider adapter changes, with no credentials, production data, disposable native HTML/CSS source, or preview-specific business-component branch.
 - Substantive Workbench UI changes follow the E2E and visual-validation reference: real built assets, semantic UI and host-state assertions, deterministic screenshot evidence when visual behavior matters, and installed-platform validation for platform-dependent integrations.
 - Installed-platform browser validation follows the layered interaction reference when Shadow DOM, iframe, controlled-input, or locator boundaries are present; it preserves host context, avoids sensitive standalone iframe URLs, and verifies every action by observable state.
 - Local deployment uses `plugin:deploy:local`, preserves credentials outside logs and repositories, and verifies the loaded plugin descriptor.
