@@ -238,6 +238,31 @@ Skip this layer for Assistant DSLs that are imported or managed without a templa
 
 ## Prompt Data Contracts
 
+For a sub-Agent, distinguish the runtime tool's structured parameters from its free-text `input`. Correctness-critical fields belong in `entity.parameters`; the host converts them to the parent-visible tool schema and child state channels. The child prompt must reference those state values with the current template syntax.
+
+```yaml
+entity:
+  prompt: |-
+    Process Case {{caseId}} at revision {{expectedRevision}} for fields {{fieldKeys}}.
+    Do not replace these values with IDs mentioned only in the free-text input.
+  parameters:
+    - type: string
+      name: caseId
+      description: Authoritative Case UUID.
+      optional: false
+      maximum: 36
+    - type: number
+      name: expectedRevision
+      description: Revision returned by the latest Case read.
+      optional: false
+    - type: array[string]
+      name: fieldKeys
+      description: Bounded field keys assigned to this child.
+      optional: false
+```
+
+The parent must still send the runtime-added `input` string, but it should contain only the objective and completion condition. Required parameter fields catch omissions and primitive type errors before child execution; server-side domain validation remains responsible for UUID ownership, freshness, writability, non-empty arrays, uniqueness, and cross-field constraints.
+
 Use a compact task object:
 
 ```ts

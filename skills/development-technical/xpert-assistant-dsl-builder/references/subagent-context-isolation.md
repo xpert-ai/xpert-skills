@@ -65,6 +65,71 @@ Set `disableMessageHistory: true` only when the child should start each new invo
 
 Pass references in the task packet instead of copied histories or full tool outputs.
 
+### Bind critical task fields with Agent parameters
+
+Use a free-text child task only when the objective is self-contained and a wrong identifier cannot cross a business boundary. When the child needs several IDs, revisions, field lists, allowed sources, or budgets, declare them on the child Agent as `entity.parameters`. Xpert adds these definitions to the parent-visible sub-Agent tool schema and copies accepted values into the child state.
+
+The runtime still adds an `input: string` field to the sub-Agent tool. Treat it as the human-readable objective and completion condition, not as the carrier for identity or authorization scope.
+
+```yaml
+- type: agent
+  key: Agent_EvidenceSpecialist
+  entity:
+    key: Agent_EvidenceSpecialist
+    leaderKey: Agent_Coordinator
+    description: Retrieve evidence for a bounded set of fields.
+    prompt: |-
+      Use only this validated delegation contract:
+      <delegated_task>
+      caseId: {{caseId}}
+      baselineId: {{baselineId}}
+      runId: {{runId}}
+      targetFieldKeys: {{targetFieldKeys}}
+      sourceDocumentIds: {{sourceDocumentIds}}
+      maxSearchCalls: {{maxSearchCalls}}
+      </delegated_task>
+      The free-text input may refine the objective but must not replace or override these fields.
+    parameters:
+      - type: string
+        name: caseId
+        description: Authoritative Case UUID returned by the current Case lookup.
+        optional: false
+        maximum: 36
+      - type: string
+        name: baselineId
+        description: Current baseline UUID returned by diagnostics or the domain contract.
+        optional: false
+        maximum: 36
+      - type: string
+        name: runId
+        description: Writable run UUID returned by the run-start or pending-run lookup.
+        optional: false
+        maximum: 36
+      - type: array[string]
+        name: targetFieldKeys
+        description: Non-empty, deduplicated field keys in this bounded task.
+        optional: false
+      - type: array[string]
+        name: sourceDocumentIds
+        description: Optional allowlist of source document UUIDs.
+        optional: true
+      - type: number
+        name: maxSearchCalls
+        description: Positive search-call budget for this invocation.
+        optional: false
+```
+
+Operational rules:
+
+- The parent first discovers authoritative IDs from domain reads, then supplies each one under its exact parameter name. Never copy one UUID into several fields merely to satisfy the schema.
+- Required parameters prevent omission and primitive type mismatch before the child starts. They do not prove referential integrity. Domain tools must still verify that the run belongs to the Case and baseline, that a revision is current, and that the target is writable.
+- Render critical parameters into the child system prompt. Declaring state channels without referencing them in a prompt or prompt template can leave the model unaware of their values.
+- Keep optional fields explicitly `optional: true`; omit them when unknown instead of inventing placeholders.
+- Current `array[string]` parameter generation validates the array and item types but does not enforce non-empty, uniqueness, or an item-count maximum. Enforce those invariants in a domain tool or an explicit preflight step, and tell the child to return `blocked` rather than guess.
+- In the current host contract, `maximum` limits string length and numeric digit count; it is not a numeric upper-bound and does not cap array length.
+- Cross-field rules such as `runId !== caseId` also remain domain invariants. Check them before delegation where possible and again at the mutation boundary.
+- Test the parent-visible child tool schema, the persisted execution inputs, and the child's rendered contract. Prompt-only assertions are insufficient.
+
 Include:
 
 - `taskId` or correlation ID;

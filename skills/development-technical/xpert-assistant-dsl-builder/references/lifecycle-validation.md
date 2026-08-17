@@ -121,12 +121,13 @@ Test progressively:
 1. Start a fresh conversation or execution context.
 2. Submit one explicit bounded task.
 3. Confirm that the primary Agent delegates to the intended child.
-4. Confirm that each child invokes only its connected middleware, Skills, tools, and knowledge sources.
-5. Confirm that returned results match the declared task/result contract.
-6. Confirm that expected outputs or artifacts were persisted.
-7. Confirm that muted internal output did not flood the user conversation.
-8. Confirm that no Agent called capabilities outside its role boundary.
-9. Repeat with a small multi-item input, then a representative bounded batch when applicable.
+4. Inspect the child execution inputs and confirm that every correctness-critical identifier, target list, and budget is present under its declared Agent parameter name; do not accept a free-text `input` packet as equivalent.
+5. Confirm that each child invokes only its connected middleware, Skills, tools, and knowledge sources.
+6. Confirm that returned results match the declared task/result contract.
+7. Confirm that expected outputs or artifacts were persisted.
+8. Confirm that muted internal output did not flood the user conversation.
+9. Confirm that no Agent called capabilities outside its role boundary.
+10. Repeat with a small multi-item input, then a representative bounded batch when applicable.
 
 Expected generic outline:
 

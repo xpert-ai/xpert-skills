@@ -125,6 +125,22 @@ for (const node of nodes) {
 
 const agents = nodes.filter((node) => node?.type === 'agent')
 const agentKeys = agents.map((node) => node.key)
+const parameterTypes = new Set([
+  'text',
+  'paragraph',
+  'string',
+  'number',
+  'object',
+  'select',
+  'file',
+  'array[string]',
+  'array[number]',
+  'array[object]',
+  'array[file]',
+  'array[document]',
+  'boolean',
+  'secret'
+])
 const primaryAgentKey = document?.team?.agent?.key
 if (!primaryAgentKey) errors.push('team.agent.key is required')
 else if (!agentKeys.includes(primaryAgentKey)) errors.push(`Primary Agent node is missing: ${primaryAgentKey}`)
@@ -142,6 +158,32 @@ for (const connection of connections) {
 for (const agent of agents) {
   const entity = agent.entity ?? {}
   if (entity.key && entity.key !== agent.key) errors.push(`Agent entity key differs from node key: ${agent.key}`)
+  if (entity.parameters != null && !Array.isArray(entity.parameters)) {
+    errors.push(`Agent parameters must be an array or null: ${agent.key}`)
+  }
+  const parameterNames = new Set()
+  for (const parameter of Array.isArray(entity.parameters) ? entity.parameters : []) {
+    if (!parameter?.name || typeof parameter.name !== 'string') {
+      errors.push(`Agent parameter is missing a name: ${agent.key}`)
+      continue
+    }
+    if (parameterNames.has(parameter.name)) {
+      errors.push(`Duplicate Agent parameter '${parameter.name}' on ${agent.key}`)
+    }
+    parameterNames.add(parameter.name)
+    if (!parameterTypes.has(parameter.type)) {
+      errors.push(`Unsupported Agent parameter type '${parameter.type}' for ${agent.key}.${parameter.name}`)
+    }
+    if (parameter.optional != null && typeof parameter.optional !== 'boolean') {
+      errors.push(`Agent parameter optional must be boolean for ${agent.key}.${parameter.name}`)
+    }
+    if (parameter.maximum != null && (typeof parameter.maximum !== 'number' || parameter.maximum <= 0)) {
+      errors.push(`Agent parameter maximum must be a positive number for ${agent.key}.${parameter.name}`)
+    }
+    if (!parameter.description) {
+      warnings.push(`Agent parameter is missing a description: ${agent.key}.${parameter.name}`)
+    }
+  }
   if (agent.key === primaryAgentKey) continue
   if (!entity.leaderKey) {
     errors.push(`Child Agent is missing entity.leaderKey: ${agent.key}`)

@@ -110,6 +110,8 @@ Keep tenant, organization, Assistant, conversation, credential, and knowledge-ba
 
 Define parent-to-child context explicitly through the delegated task input, state variables, prompt templates, and graph connections. Do not use `disableMessageHistory` as a parent-history inheritance or filtering control.
 
+When a child depends on multiple correctness-critical identifiers or bounded collections, define them as the child Agent's `entity.parameters` instead of relying on a prose task packet. The parent must populate those named fields in the Agent tool call; keep the runtime-added `input` field for a concise objective only. Render the parameters in the child prompt (for example `{{caseId}}`) so the child reasons over the validated state values, and keep server-side scope validation as the final authority.
+
 ## Validate Structure
 
 Parse YAML and assert graph objects rather than string fragments. Verify:
