@@ -269,7 +269,7 @@ Keep the boundary clear:
 
 ## Workbench View
 
-Add a Workbench view when users must review, correct, approve, reject, upload files, or submit results. Use a remote component iframe when the UI needs custom interaction beyond declarative tables and forms.
+Add a Workbench view when users must review, correct, approve, reject, upload files, or submit results. Use a remote component iframe when the UI needs custom interaction beyond declarative tables and forms. Before adding review gates, approval prompts, warnings, diagnostics, or dense detail surfaces, read [references/human-decision-load-and-progressive-disclosure.md](references/human-decision-load-and-progressive-disclosure.md); keep the system behavior thorough while minimizing mandatory user decisions and progressively disclosing non-decision information.
 
 For React remote component views, prefer TSX as the default development mode. Implement the view as maintainable React TypeScript source, preferably `remote-components/<entry>/src/main.tsx` plus supporting `*.ts`/`*.tsx` files, and generate the iframe entry `app.js` through a repeatable build step such as esbuild. Do not hand-maintain a large `React.createElement` `app.js` as the source of truth unless the user explicitly asks for a no-build static script or the existing plugin already has a deliberate no-build convention. Keep the generated `app.js` only as the runtime artifact read by `renderRemoteReactIframeHtml`, and wire `build`, `typecheck` or an equivalent check so stale generated output is caught.
 
@@ -289,7 +289,7 @@ When a Remote View needs a standalone local preview, read [references/remote-vie
 
 ### Confirmation Dialog Standard
 
-Treat confirmation as a dedicated interaction pattern for consequential, destructive, security-sensitive, or irreversible actions. Do not use browser-native dialogs or a generic content modal as a confirmation substitute. Reserve ordinary dialogs for forms, details, previews, and other non-confirmation content.
+First use [references/human-decision-load-and-progressive-disclosure.md](references/human-decision-load-and-progressive-disclosure.md) to decide whether a confirmation is actually necessary. Treat confirmation as a dedicated interaction pattern only for consequential, destructive, security-sensitive, or irreversible actions; showing information or proving that the user saw it is not sufficient reason to interrupt the flow. Do not use browser-native dialogs or a generic content modal as a confirmation substitute. Reserve ordinary dialogs for forms, details, previews, and other non-confirmation content.
 
 Provide an explicit title, consequence-focused description, Cancel action, and confirmation action. Visually distinguish destructive actions. Resolve dismiss, Escape, overlay close, and Cancel as cancellation. Execute the protected operation only after explicit confirmation. For asynchronous mutations, prevent duplicate submission, expose pending state, and keep failures recoverable. Keep confirmation copy localized and state-driven.
 
@@ -487,7 +487,7 @@ Before finishing, verify:
 - Every Extension View context handoff proves the complete path from selected UI state through `assistant.context.set`, ChatKit `request.context`, and LangGraph `configurable.context`; no prompt claims that the model can directly read runtime context unless a tested prompt-injection boundary exists.
 - Context-aware tools resolve omitted business identifiers from a typed runtime-context adapter, prefer explicit tool input, revalidate tenant/organization/user access and current server state, and return `no_active_context` instead of failing schema validation when no selection exists.
 - `workbench.navigation.open` targets declare and consume the required query contract, preserve scalar `selectionId` and `parameters`, resolve local versus host-composed View keys deliberately, and pass an installed-platform click-through test.
-- Every confirmation uses the designated accessible confirmation primitive; maintained UI source contains no browser-native confirmation calls or generic content-dialog substitutes.
+- Every mandatory confirmation is justified by a concrete consequence and uses the designated accessible confirmation primitive; informational or safely reversible flows continue without confirmation and expose concise status plus progressively disclosed detail. Maintained UI source contains no browser-native confirmation calls or generic content-dialog substitutes.
 - Remote component table views use scalar query parameters, remote pagination, per-tab filters, and total/page/pageSize metadata instead of fetching all rows into the iframe.
 - Source and test code do not use broad type escape hatches (`as any`, `as unknown as`, `: any`, `: unknown`) except for a deliberately isolated compatibility helper; concrete library, SDK, bridge, and mock types are used instead.
 - User-visible text uses the shared typed i18n facade; maintained components contain no inline locale-to-text branches, catalogs pass key/parameter completeness checks, and locale/platform/third-party mappings stay in explicit adapter boundaries.

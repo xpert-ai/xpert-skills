@@ -92,7 +92,7 @@ Do not assume a one-to-one mapping between an Agent node and a real user job tit
 - One human may use several Agent roles through one Assistant.
 - One Agent may assist several human roles if its authority and outputs are unchanged.
 
-Encode the human boundary in domain policy and explicit confirmation, not merely in the Agent name. Require confirmation for publication, deletion, externally visible changes, financial commitments, destructive operations, and controlled overrides. Persist the confirming user and audit context where the action matters.
+Encode the human boundary in domain policy and explicit confirmation, not merely in the Agent name. Require confirmation for publication, deletion, externally visible changes, financial commitments, destructive operations, and controlled overrides. Do not turn ordinary status, diagnostics, reversible work, or read-only review into approval gates; follow [human-decision-load-and-progressive-disclosure.md](human-decision-load-and-progressive-disclosure.md). Persist the confirming user and audit context where the action matters.
 
 Let the main Agent own user communication and reconciliation. Let specialist Agents return compact receipts or findings; they should not silently acquire approval authority from their parent.
 
