@@ -2,6 +2,21 @@
 
 Use this reference when an Xpert Remote View asks the current browser host to perform a UI-local action through `invokeClientCommand`, including opening another Workbench View, a knowledge document, or an Assistant conversation.
 
+For `assistant.context.set`, use this closed-command protocol together with [extension-view-agent-context.md](extension-view-agent-context.md). This file governs command authorization and dispatch; the companion reference governs how runtime context becomes useful to tools or visible to the model.
+
+## Contents
+
+- [Capability Invariant](#capability-invariant)
+- [Current Command Catalog](#current-command-catalog)
+- [Declare the Source View Capability](#declare-the-source-view-capability)
+- [Register the Host Handler](#register-the-host-handler)
+- [Invoke the Command from the Remote View](#invoke-the-command-from-the-remote-view)
+- [Define the Target View Query Contract](#define-the-target-view-query-contract)
+- [Resolve Local and Host-Composed View Keys](#resolve-local-and-host-composed-view-keys)
+- [`workbench.navigation.open` Targets](#workbenchnavigationopen-targets)
+- [Test the Closed Protocol](#test-the-closed-protocol)
+- [Diagnostic Order](#diagnostic-order)
+
 ## Capability Invariant
 
 Treat a client command as a three-part capability contract:
@@ -19,6 +34,61 @@ Client command 'workbench.navigation.open' is not available
 ```
 
 Diagnose that message at the manifest allowlist first. Registering or debugging the handler cannot fix a missing `clientCommands` declaration.
+
+## Current Command Catalog
+
+Use this catalog as a quick index, not as proof that a command is available in the current host. Before implementation, verify the active `@xpert-ai/contracts` exports, the target host registration, and the source View manifest. Prefer public constants over copied string literals.
+
+### Public platform commands
+
+These keys are exported by the current `@xpert-ai/contracts` View Extension contract:
+
+| Command constant | Command key | Purpose | Minimum useful payload |
+| --- | --- | --- | --- |
+| `ASSISTANT_CHAT_SEND_MESSAGE_COMMAND` | `assistant.chat.send_message` | Send a user message through the current Assistant ChatKit. | `{ text: string }` |
+| `ASSISTANT_CONTEXT_SET_COMMAND` | `assistant.context.set` | Publish or clear View-scoped Assistant request context. | Set: `{ key, context?, env? }`; clear: `{ key, clear: true }` |
+| `WORKBENCH_FILE_OPEN_COMMAND` | `workbench.file.open` | Open a host-managed file preview, optionally anchored to evidence. | `{ name, url, previewUrl?, evidence? }` |
+| `WORKBENCH_NAVIGATION_OPEN_COMMAND` | `workbench.navigation.open` | Open a supported Workbench destination. | `{ target, ...targetIdentifiers }` |
+
+Import these from `@xpert-ai/contracts`, or from an active package that deliberately re-exports the same public constants. Do not redeclare their string values in plugin source.
+
+For `assistant.context.set`, follow [extension-view-agent-context.md](extension-view-agent-context.md); successful command dispatch alone does not make the context model-visible. For `workbench.navigation.open`, check the target-specific section below because hosts support different target subsets.
+
+### Host-limited commands
+
+The current hosts also contain commands that are not exported as general platform contracts:
+
+| Command key | Current scope | Purpose | Minimum useful payload |
+| --- | --- | --- | --- |
+| `workbench.browser.open` | ClawXpert and Data-Xpert Agent Workbench | Open a URL in the host-managed browser preview. | `{ url, title? }` |
+| `workbench.file.download` | Data-Xpert Agent Workbench | Download bounded text content as a local file. | `{ fileName, mediaType, content }` |
+
+Treat these as host capabilities, not portable plugin APIs. Before declaring one, confirm the intended host registers the exact key and accepts the payload. If a command should become portable, promote its constant, payload type, handler contract, and tests into the public contracts layer instead of copying the local implementation.
+
+### Current host support snapshot
+
+This matrix summarizes current source registrations and may change. A check mark means a handler is registered, not that every payload or navigation target is supported.
+
+| Command | Generic Xpert page | Shared Assistant shell | ClawXpert Workbench | Data-Xpert Agent Workbench |
+| --- | --- | --- | --- | --- |
+| `assistant.chat.send_message` | — | ✓ | ✓ | ✓ |
+| `assistant.context.set` | — | ✓ | ✓ | ✓ |
+| `workbench.file.open` | ✓ | ✓ | ✓ | ✓ |
+| `workbench.navigation.open` | ✓ | ✓ | ✓ | ✓ |
+| `workbench.browser.open` | — | — | ✓ | ✓ |
+| `workbench.file.download` | — | — | — | ✓ |
+
+`workbench.navigation.open` target support is narrower than command registration:
+
+- Generic Xpert page and Shared Assistant shell currently support knowledgebase navigation only.
+- ClawXpert Workbench currently supports knowledgebase documents, Assistant conversations, and extension Views.
+- Data-Xpert Agent Workbench currently supports knowledgebase documents and Assistant conversations, but not extension View targets.
+
+Do not confuse command keys with related protocol values:
+
+- `knowledgebase.documents`, `assistant.conversation`, and `workbench.view` are navigation targets, not commands.
+- `assistant.tool.completed`, `assistant.visualization.emitted`, and `assistant.citation.open` are host events, not commands.
+- View `actions` call the provider backend; `hostEvents.subscriptions` deliver host-to-View events. Neither replaces `clientCommands`.
 
 ## Declare the Source View Capability
 
