@@ -54,23 +54,21 @@ When TypeScript code shows `any` or `unknown` around plugin, SDK, React, remote 
 
 Every Agentic App with middleware tools, host events, or a remote component should include a switchable debug logger before deep debugging. Do not rely on ad hoc `console.info` statements. Detailed logs must be off by default in production and easy to enable during local development. For remote components, the host renderer should derive the default debug state from the Cloud `environment.production` value and pass it in the iframe `init` message, for example `{ debug: { enabled: !environment.production, production: environment.production } }`; the iframe should consume that value as its default and should not infer development mode from `localhost`, hostname, API URL, tenant, organization, or token-like values.
 
+Treat every Remote View iframe as a sandboxed opaque-origin document. Never read or write `localStorage` or `sessionStorage` from remote-component code; even optional chaining still reads the property and may throw `SecurityError` when the iframe lacks `allow-same-origin`. Keep ephemeral state in React state or refs, persist durable state through the platform bridge, and receive runtime configuration through the host `init` message.
+
 Use a small shared logger per plugin surface:
 
 ```ts
-type DebugLevel = 'debug' | 'info' | 'warn' | 'error'
-
+interface RemoteDebugConfig { enabled: boolean }
+let debugEnabled = false
+export function configureRemoteDebug(next: RemoteDebugConfig) { debugEnabled = next.enabled }
 export function createPluginDebugLogger(namespace: string) {
-  const key = `xpert.debug.${namespace}`
-  const enabled = () =>
-    globalThis.localStorage?.getItem(key) === '1' ||
-    new URLSearchParams(globalThis.location?.search || '').get('xpertDebug') === namespace
-
   return {
     debug(event: string, data?: object) {
-      if (enabled()) console.debug(`[${namespace}] ${event}`, redactDebugData(data))
+      if (debugEnabled) console.debug(`[${namespace}] ${event}`, redactDebugData(data))
     },
     info(event: string, data?: object) {
-      if (enabled()) console.info(`[${namespace}] ${event}`, redactDebugData(data))
+      if (debugEnabled) console.info(`[${namespace}] ${event}`, redactDebugData(data))
     },
     warn(event: string, data?: object) {
       console.warn(`[${namespace}] ${event}`, redactDebugData(data))
@@ -82,7 +80,7 @@ export function createPluginDebugLogger(namespace: string) {
 }
 ```
 
-Keep this logger tiny and typed. Implement `redactDebugData` beside the logger to remove secrets and summarize large values before printing. Enable logging explicitly with `localStorage.setItem('xpert.debug.<entry>', '1')` or `?xpertDebug=<entry>`; support a `localStorage` value of `0` as a force-off override even when the host default enables debug. If server-side debug is needed, gate it through plugin config or an explicit environment flag, never through user-provided request data.
+Keep this logger tiny and typed. Implement `redactDebugData` beside it to remove secrets and summarize large values before printing. Call `configureRemoteDebug(init.debug)` when the bridge receives `init`. For preview or query-string overrides, resolve the switch in the host renderer or preview harness and pass the resulting boolean in `init.debug`; do not inspect Web Storage inside the iframe. If server-side debug is needed, gate it through plugin config or an explicit environment flag, never through user-provided request data.
 
 Log only useful checkpoints:
 
@@ -482,6 +480,7 @@ Before finishing, verify:
 - Long-running Agent workflows without proactive delivery follow the bounded wait-tool contract, preserve durable recovery, propagate cancellation, and prevent duplicate completion replies.
 - Data model preserves source evidence, confidence, review status, and failure reasons.
 - Workbench manifest declares data source, actions, file actions, host events, and remote component entry when used.
+- Remote-component source and generated assets do not access `localStorage` or `sessionStorage`; sandbox regression tests prove initialization still succeeds when Web Storage property access throws `SecurityError`.
 - Every new or substantially refactored Workbench follows the enterprise shadcn design principles for task focus, quiet hierarchy, controlled density, action priority, data and status semantics, human-AI accountability, adaptivity, and accessibility; every shadcn/Tailwind Remote View also follows the host theme bridge contract and passes installed-iframe computed-style checks for `--xui-color-border`, `--border`, `--input`, `--ring`, and representative borders.
 - Every Remote View `invokeClientCommand` key is declared in that View manifest's `clientCommands` allowlist and is registered by every intended host surface; tests cover both undeclared-command rejection and successful dispatch.
 - Every Extension View context handoff proves the complete path from selected UI state through `assistant.context.set`, ChatKit `request.context`, and LangGraph `configurable.context`; no prompt claims that the model can directly read runtime context unless a tested prompt-injection boundary exists.
