@@ -22,7 +22,7 @@ Treat 1,000 lines as an architecture-review threshold for maintained source file
 ## Development Workflow
 
 1. Inspect the target plugin repository and the host app conventions before editing.
-2. Define the business loop: what the Agent automates, what humans review, and what the system persists.
+2. Define the business loop: what the Agent automates, what humans review, and what the system persists. When each plugin business project, case, or similar entity needs an isolated file space shared by the Primary Agent and subagents, read [references/assistant-workspace-projects-catalog.md](references/assistant-workspace-projects-catalog.md) and bind it to the Assistant `projects` Workspace Catalog.
 3. Determine whether the plugin provides host server capabilities; if it registers entities, controllers, routes, or equivalent process-global infrastructure, declare it as system level and define its stable artifact namespace before implementing artifact identifiers.
 4. Define domain capability boundaries and map middleware, Views, Agent roles, and human authority according to [references/middleware-view-role-boundaries.md](references/middleware-view-role-boundaries.md).
 5. Register the server module, entities, services, middleware, and view provider.
@@ -490,7 +490,7 @@ Before finishing, verify:
 - Remote component table views use scalar query parameters, remote pagination, per-tab filters, and total/page/pageSize metadata instead of fetching all rows into the iframe.
 - Source and test code do not use broad type escape hatches (`as any`, `as unknown as`, `: any`, `: unknown`) except for a deliberately isolated compatibility helper; concrete library, SDK, bridge, and mock types are used instead.
 - User-visible text uses the shared typed i18n facade; maintained components contain no inline locale-to-text branches, catalogs pass key/parameter completeness checks, and locale/platform/third-party mappings stay in explicit adapter boundaries.
-- Assistant template includes required plugins/capabilities and practical starter prompts.
+- Assistant template includes required plugins/capabilities and practical starter prompts; Project-scoped apps use a distinct persisted `workspaceProjectId`, declare the intended `workspaceScope` policy, and bind Primary and subagent conversations, files, FileAssets, and runs to that same trusted Project.
 - Tests cover service behavior, middleware tool calls, manifest/view actions, remote component bridge behavior, and end-to-end user flow.
 - Interactive Remote View prototypes follow the prototype-as-production standard: one maintained TSX/shadcn/Tailwind implementation and one generated asset set serve preview and production; only the typed Preview Fixture versus real View Provider adapter changes, with no credentials, production data, disposable native HTML/CSS source, or preview-specific business-component branch.
 - Substantive Workbench UI changes follow the E2E and visual-validation reference: real built assets, semantic UI and host-state assertions, deterministic screenshot evidence when visual behavior matters, and installed-platform validation for platform-dependent integrations.
