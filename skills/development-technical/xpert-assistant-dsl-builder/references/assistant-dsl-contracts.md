@@ -6,6 +6,7 @@
 - Core document contract
 - Node and connection contract
 - Agent hierarchy
+- Programmatic specialist entrypoints
 - Middleware and tool ownership
 - Knowledge bindings
 - Optional template contributions
@@ -127,6 +128,44 @@ Use stable conceptual Agent keys. Do not use a middleware tool name as an Agent 
 Set `disableMessageHistory` according to the Agent's own cross-round memory contract. Prefer it for stateless Workers and specialists whose current invocation input is complete: on a new invocation round, the runtime omits that Agent's prior-round message list while retaining the messages needed for model/tool steps within the current round. The flag does not select, inherit, or suppress the parent Agent's message history; define parent-to-child context separately through task inputs, state variables, prompt templates, and graph connections.
 
 Use mute paths for internal Agents whose streamed narration should be hidden. Muting does not remove the requirement for the child to return a compact result.
+
+## Programmatic Specialist Entrypoints
+
+An Agentic App may start a professional Agent directly through the platform `AssistantTaskRuntimeCapability`. Treat every such `agentKey` as a public runtime entrypoint, not an implementation detail.
+
+Define entrypoints once in plugin code:
+
+```ts
+export const SPECIALIST_AGENT_KEYS = {
+  interpretation: 'Agent_Interpretation',
+  outline: 'Agent_Outline',
+  authoring: 'Agent_Authoring'
+} as const
+```
+
+For every entrypoint:
+
+- Declare an Agent node with the exact key in the source DSL.
+- Keep the node present in the built asset, installed draft, and published graph.
+- Connect only the middleware, Skills, tools, and knowledge required by that role.
+- Define structured parameters for authoritative IDs, expected revisions, and bounded collections.
+- Make the prompt require controlled begin/append/finalize tools when the role creates revisioned data.
+- Use a compact objective in the runtime prompt; do not encode identity or authority only in prose.
+- Keep internal task narration muted when appropriate while preserving the execution tree and compact result.
+
+A programmatic launch does not relax graph rules. If the specialist is also a follower, retain its `leaderKey` and incoming Agent connection. Do not create a second duplicate Agent node for background use, and do not give the coordinator the specialist's mutation tools merely to simplify routing.
+
+Do not expose a generic Assistant Task launcher to the specialist itself. The deterministic application orchestrator owns stage transitions and starts bounded tasks; the specialist owns only its current domain mutation contract.
+
+Changing an entrypoint key is a graph contract change. Increment `team.version`, update plugin launch registries and template Skill dependencies, publish a new graph, and migrate or reject queued tasks that still reference the old key.
+
+Add a structural test that loads the same launch registry used by the application and asserts:
+
+- every registered `agentKey` resolves to exactly one Agent node;
+- each entrypoint owns the expected workflow connections and no privileged extras;
+- every required Skill contribution targets an existing entrypoint;
+- the built YAML contains the same entrypoint set as source;
+- no queued mode/stage registry references an unknown Agent key.
 
 ## Middleware And Tool Ownership
 
@@ -294,6 +333,7 @@ Bind temporary candidate IDs to the item and retrieval snapshot that produced th
 Parse YAML and assert objects. At minimum verify:
 
 - exact Agent set and primary Agent;
+- every programmatic specialist entrypoint and its expected least-privilege capability set;
 - every child `leaderKey` and incoming Agent connection;
 - no duplicate node keys, cycles, or dangling endpoints;
 - required flags for mandatory followers;

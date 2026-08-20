@@ -14,6 +14,7 @@ For `assistant.context.set`, use this closed-command protocol together with [ext
 - [Define the Target View Query Contract](#define-the-target-view-query-contract)
 - [Resolve Local and Host-Composed View Keys](#resolve-local-and-host-composed-view-keys)
 - [`workbench.navigation.open` Targets](#workbenchnavigationopen-targets)
+- [Open Assistant Task Execution Records](#open-assistant-task-execution-records)
 - [Test the Closed Protocol](#test-the-closed-protocol)
 - [Diagnostic Order](#diagnostic-order)
 
@@ -250,6 +251,43 @@ Use public target constants and payload contracts from `@xpert-ai/contracts`. Th
 - Assistant conversation: pass `conversationId`, with optional `threadId` and `executionId` when the host supports them.
 
 Treat supported targets as a host contract, not a plugin assumption. Return `unsupported_target` for unknown targets and `bad_request` for missing identifiers.
+
+## Open Assistant Task Execution Records
+
+When a plugin launches professional Agents through the Assistant Task runtime, persist the returned `conversationId`, `threadId`, and `executionId` with each immutable domain execution record. Use those public handles to let users inspect the exact ChatKit execution from a Workbench View.
+
+Render a status dot or compact execution marker as a real focusable Button. Its accessible name should include the role, sequence, status, and timestamp; color alone must not communicate status. Keep failed and superseded attempts available so the user can follow the audit trail.
+
+Invoke the public navigation command instead of constructing a ChatKit URL or reaching into the host router:
+
+```ts
+import {
+  WORKBENCH_ASSISTANT_CONVERSATION_TARGET,
+  WORKBENCH_NAVIGATION_OPEN_COMMAND
+} from '@xpert-ai/contracts'
+
+const result = await remoteBridge.invokeClientCommand(
+  WORKBENCH_NAVIGATION_OPEN_COMMAND,
+  {
+    target: WORKBENCH_ASSISTANT_CONVERSATION_TARGET,
+    conversationId: record.conversationId,
+    threadId: record.threadId ?? undefined,
+    executionId: record.executionId ?? undefined
+  }
+)
+```
+
+Require a valid `conversationId` before enabling the navigation control. Pass `threadId` and `executionId` whenever available so the host can select the exact run rather than merely opening the conversation. Keep the current View usable and show recoverable feedback when the host returns `unsupported`, `unsupported_target`, `bad_request`, or another structured failure.
+
+Do not expose Assistant IDs, tenant/organization IDs, API URLs, tokens, or internal execution routes to the iframe. The View only needs the public navigation handles returned by the platform runtime.
+
+Add tests that prove:
+
+- the source manifest allowlists `WORKBENCH_NAVIGATION_OPEN_COMMAND`;
+- clicking each execution marker sends the matching conversation/thread/execution handles;
+- missing `conversationId` leaves the marker non-navigable but still readable;
+- the installed host opens the expected conversation and selects the requested execution;
+- failed navigation does not erase or mutate the execution record.
 
 ## Test the Closed Protocol
 

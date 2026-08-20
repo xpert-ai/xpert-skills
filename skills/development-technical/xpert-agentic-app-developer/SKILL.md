@@ -27,7 +27,7 @@ Treat 1,000 lines as an architecture-review threshold for maintained source file
 4. Define domain capability boundaries and map middleware, Views, Agent roles, and human authority according to [references/middleware-view-role-boundaries.md](references/middleware-view-role-boundaries.md).
 5. Register the server module, entities, services, middleware, and view provider.
 6. Expose business actions as Agent middleware tools with strict schemas and call order.
-7. When durable background work must keep the current Agent conversation turn alive because proactive completion delivery is unavailable, read [references/agent-long-running-tasks.md](references/agent-long-running-tasks.md) and implement the bounded long-polling bridge.
+7. When a deterministic plugin workflow starts specialist subagents through the platform Assistant Task capability, read [references/assistant-task-orchestration.md](references/assistant-task-orchestration.md); when durable background work must keep the current Agent conversation turn alive because proactive completion delivery is unavailable, read [references/agent-long-running-tasks.md](references/agent-long-running-tasks.md) and implement the bounded long-polling bridge.
 8. Persist reviewable business data with evidence, confidence, status, and failure state.
 9. Add a Workbench or extension view for human review and operational actions.
 10. When the app publishes previews or share links, read [references/artifact-share-links.md](references/artifact-share-links.md) and use the platform Artifacts and Workspace Files capabilities.
@@ -477,7 +477,7 @@ Before finishing, verify:
 - Every domain tool has exactly one owning middleware; middleware tool sets are disjoint unless an explicitly tested shared platform tool is intentional. Views are gated by the owning Feature, and Assistant roles receive only directly connected capabilities.
 - All plugin entities include `tenantId` and `organizationId`, write paths populate them, and all data reads/mutations are scoped by tenant/organization whenever context is available.
 - Middleware tools have schemas, descriptions, ordered workflow, per-item persistence, failure reporting, and `verboseParsingErrors: true` on every structured tool configuration.
-- Long-running Agent workflows without proactive delivery follow the bounded wait-tool contract, preserve durable recovery, propagate cancellation, and prevent duplicate completion replies.
+- Programmatically launched specialist subagents follow the Assistant Task orchestration contract, use stable published `agentKey` values, preserve their parent graph relationship and least-privilege capability set, persist platform execution handles separately from domain task ids, finalize through domain tools, and remain recoverable across retries and restarts; long-running Agent workflows without proactive delivery follow the bounded wait-tool contract, preserve durable recovery, propagate cancellation, and prevent duplicate completion replies.
 - Data model preserves source evidence, confidence, review status, and failure reasons.
 - Workbench manifest declares data source, actions, file actions, host events, and remote component entry when used.
 - Remote-component source and generated assets do not access `localStorage` or `sessionStorage`; sandbox regression tests prove initialization still succeeds when Web Storage property access throws `SecurityError`.
