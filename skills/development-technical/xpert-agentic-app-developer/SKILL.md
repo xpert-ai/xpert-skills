@@ -211,6 +211,8 @@ Every plugin entity must support tenant and organization isolation. Add nullable
 
 Expose business actions through middleware tools. Keep each tool narrow and explicit. Prefer ordered, restartable workflows over one giant tool.
 
+When creating, changing, or reviewing model-visible middleware tools, also use the Xpert Plugin Development skill and read [its Tool Contract Design reference](../xpert-plugin-development/references/tool-contract-design.md). Treat that document as the canonical detailed contract for schemas, DTOs, pagination, authorization, localized ChatKit titles, Tool/Middleware icon inheritance, `changeSummary`, event payload filtering, and tests.
+
 Good document-intake pattern:
 
 ```text
@@ -229,7 +231,8 @@ Tool design rules:
 - Require source evidence for important extracted values.
 - Provide a failure-reporting tool for unreadable files or incomplete parsing.
 - Return compact operation DTOs by default: business id, revision/status, a human message, changed ids/counts, blocking diagnostics, and the next recovery action. Never return a full document, scene, IR, binary payload, or complete history from a mutation or validation tool. Expose full content only through an explicit paged/item-level read tool.
-- Give every user-visible mutation schema a bounded `changeSummary`. When it is present, middleware `wrapToolCall` must publish `ON_TOOL_MESSAGE` events for `running`, `success`, and `fail`; use the exact summary as both the step `title` and `message`, and keep the stable tool name in the event `tool` field. Event publication failure must not fail the business operation.
+- Follow the Tool Contract Design display contract: use localized `metadata.toolName` as the default title, require bounded `changeSummary` only for genuinely dynamic business descriptions, and never expose `changeSummary` in ChatKit structured details.
+- Define the tool-family default icon once on the owning middleware strategy's `meta.icon`; use `metadata.toolIcon` only for a semantically distinct tool override. Never set the host-reserved `middlewareIcon` directly or hardcode business tool-name icon mappings in ChatKit.
 - Await every asynchronous service call before serializing the tool result. Never pass a live Promise to `JSON.stringify` or detach a rejecting Promise from the tool invocation.
 
 Example:
@@ -238,16 +241,11 @@ Example:
 const saveContractHeaderTool = tool(
   async (input) => {
     const contract = await service.upsertContractHeader(input)
-    return JSON.stringify({
-      message: 'Contract header was saved. Next save one line at a time.',
-      contractId: contract.id,
-      status: contract.status
-    })
+    return JSON.stringify({ message: 'Contract header was saved.', contractId: contract.id, status: contract.status })
   },
   {
     name: 'contract_upsert_header',
-    description:
-      'Create or reset the parsed contract header. Call this before saving line items.',
+    description: 'Create or reset the parsed contract header. Call this before saving line items.',
     schema: contractHeaderSchema,
     verboseParsingErrors: true
   }
@@ -383,7 +381,7 @@ Use `refresh` for simple declarative views. Use `forward` for remote components 
 For remote components, implement the event path as a closed protocol, not a best-effort side effect:
 
 1. Middleware mutation tools must return a compact result that includes the mutated business id whenever possible, such as `documentId`, `drawingId`, `recordId`, `versionId`, and a human `message`.
-2. The host event publisher must preserve a compact `data.input` and `data.output` summary when forwarding ChatKit tool logs. It may redact host ids before iframe delivery, but it should not drop the target business id.
+2. The host event publisher must preserve a compact `data.input` and `data.output` summary when forwarding ChatKit tool logs. It may redact host ids before iframe delivery, but it should not drop the target business id. Apply the Tool Contract Design display and payload-filtering rules before forwarding the event.
 3. The view manifest must declare `hostEvents.subscriptions` with stable `key`, exact `event`, `sources`, and `toolNames`. Use `action.type: 'forward'` for remote components and a small debounce only for duplicate bursts.
 4. The remote bridge must forward the normalized event to the iframe and tolerate common envelope shapes: `event`, `payload`, `data`, `result`, and the whole message as fallback.
 5. The remote component must normalize tool events in one tested helper. Read tool name from top-level fields, `payload/data`, `toolCall/tool_call`, `function`, `content`, and JSON string previews. Read target ids from top-level fields, `input`, `args`, `target`, `output/result`, `document/item`, and truncated `argsPreview` when possible.
@@ -476,7 +474,7 @@ Before finishing, verify:
 - Server module registers entities, services, middleware, and view providers.
 - Every domain tool has exactly one owning middleware; middleware tool sets are disjoint unless an explicitly tested shared platform tool is intentional. Views are gated by the owning Feature, and Assistant roles receive only directly connected capabilities.
 - All plugin entities include `tenantId` and `organizationId`, write paths populate them, and all data reads/mutations are scoped by tenant/organization whenever context is available.
-- Middleware tools have schemas, descriptions, ordered workflow, per-item persistence, failure reporting, and `verboseParsingErrors: true` on every structured tool configuration.
+- Middleware tools follow the canonical Tool Contract Design reference, including strict schemas, compact DTOs, `verboseParsingErrors`, localized default titles, middleware-default/tool-override icon inheritance, bounded dynamic summaries, ChatKit payload filtering, and contract tests.
 - Programmatically launched specialist subagents follow the Assistant Task orchestration contract, use stable published `agentKey` values, preserve their parent graph relationship and least-privilege capability set, persist platform execution handles separately from domain task ids, finalize through domain tools, and remain recoverable across retries and restarts; long-running Agent workflows without proactive delivery follow the bounded wait-tool contract, preserve durable recovery, propagate cancellation, and prevent duplicate completion replies.
 - Data model preserves source evidence, confidence, review status, and failure reasons.
 - Workbench manifest declares data source, actions, file actions, host events, and remote component entry when used.

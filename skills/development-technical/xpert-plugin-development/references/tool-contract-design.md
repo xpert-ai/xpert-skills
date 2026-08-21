@@ -7,14 +7,16 @@ Use these rules whenever creating or reviewing Xpert Agent middleware tools, nor
 1. [Choose the correct tool surface](#choose-the-correct-tool-surface)
 2. [Define one bounded intent](#define-one-bounded-intent)
 3. [Validate every input with a strict schema](#validate-every-input-with-a-strict-schema)
-4. [Return allowlisted DTOs](#return-allowlisted-dtos)
-5. [Disclose data progressively](#disclose-data-progressively)
-6. [Paginate collections at the data source](#paginate-collections-at-the-data-source)
-7. [Preserve scope, authorization, and concurrency](#preserve-scope-authorization-and-concurrency)
-8. [Design revisioned draft mutations](#design-revisioned-draft-mutations)
-9. [Model long-running work as jobs](#model-long-running-work-as-jobs)
-10. [Annotate effects and visibility](#annotate-effects-and-visibility)
-11. [Test the contract](#test-the-contract)
+4. [Design ChatKit titles and change summaries](#design-chatkit-titles-and-change-summaries)
+5. [Define Agent middleware tool icons](#define-agent-middleware-tool-icons)
+6. [Return allowlisted DTOs](#return-allowlisted-dtos)
+7. [Disclose data progressively](#disclose-data-progressively)
+8. [Paginate collections at the data source](#paginate-collections-at-the-data-source)
+9. [Preserve scope, authorization, and concurrency](#preserve-scope-authorization-and-concurrency)
+10. [Design revisioned draft mutations](#design-revisioned-draft-mutations)
+11. [Model long-running work as jobs](#model-long-running-work-as-jobs)
+12. [Annotate effects and visibility](#annotate-effects-and-visibility)
+13. [Test the contract](#test-the-contract)
 
 ## Choose the correct tool surface
 
@@ -80,6 +82,99 @@ export type ListClipsInput = z.infer<typeof listClipsSchema>
 ```
 
 Never weaken runtime validation to solve TypeScript generic expansion. Isolate the overloaded `tool()` type at one typed SDK boundary as described in `general.md`, while keeping the real Zod schema and inferred handler input.
+
+## Design ChatKit titles and change summaries
+
+Apply these rules to Xpert-native LangChain Agent middleware tools. Standard MCP tools use their MCP annotations and `_meta` contracts instead; do not copy `metadata.toolName` into MCP metadata unless an explicit Xpert adapter supports it.
+
+1. Give every model-visible Agent middleware tool a stable default display title through localized `metadata.toolName`, normally `{ en_US, zh_Hans }`. Keep `name` as the stable, non-localized machine identifier used for model selection, event filtering, logs, and the event `tool` field.
+2. Treat `metadata.toolName` as the default ChatKit title. Resolve it using the current normalized locale, then fall back to another supported locale and finally the stable tool name. Do not make tool execution correctness depend on localized display text.
+3. Add a bounded `changeSummary` only when a user-visible mutation needs a runtime-specific business description that the fixed title cannot express, such as the affected document, version, or decision. Omit it for reads and deterministic actions whose meaning is already clear from `metadata.toolName`; do not create unnecessary prose work for the model.
+4. When `changeSummary` is present, middleware may use the resolved value as the `ON_TOOL_MESSAGE` title and message for `running`, `success`, and `fail`. Event delivery remains observational and must not fail or roll back the business operation.
+5. Before emitting or forwarding a tool event to ChatKit, recursively remove `changeSummary` from structured `input`, `output`, arguments, nested values, and JSON previews. It is progress/audit context, not a user-facing input field. Preserve the stable tool name, target business identifiers, status, and compact mutation receipt.
+6. Keep custom event and automatic `on_tool_start` behavior aligned: both must show the localized fixed title when no dynamic summary is needed, and neither may expose `changeSummary` in expandable structured details.
+
+```ts
+const saveContractHeaderTool = tool(
+  async (input) => {
+    const contract = await service.upsertContractHeader(input)
+    return JSON.stringify({
+      contractId: contract.id,
+      status: contract.status,
+      message: 'Contract header was saved.'
+    })
+  },
+  {
+    name: 'contract_upsert_header',
+    description: 'Create or reset the parsed contract header.',
+    schema: contractHeaderSchema,
+    verboseParsingErrors: true,
+    metadata: {
+      toolName: {
+        en_US: 'Save contract header',
+        zh_Hans: '保存合同抬头'
+      }
+    }
+  }
+)
+```
+
+## Define Agent middleware tool icons
+
+Apply this contract to Xpert-native Agent middleware tools and their ChatKit execution rows. Keep Workbench/Remote View icons and standard MCP/MCP App icons on their own UI or MCP metadata contracts; do not reuse the runtime-only fields below for those surfaces.
+
+1. Define one semantic default icon for the tool family on the owning middleware strategy's `meta.icon`. Use the platform `IconDefinition` shape rather than a component instance or a business-specific ChatKit mapping.
+2. Let the host copy `meta.icon` into each runtime tool as the reserved `metadata.middlewareIcon` fallback. Plugin and middleware authors must not set `middlewareIcon` themselves.
+3. Add `metadata.toolIcon` only when one tool's action is meaningfully different from the middleware family. Do not repeat the same default icon on every tool.
+4. Preserve this resolution order everywhere: explicit `metadata.toolIcon` -> host-inherited `metadata.middlewareIcon` from `meta.icon` -> Toolset/Provider/type fallback -> generic fallback. A specific tool override must never be replaced by the middleware default.
+5. Keep title and icon independent. `metadata.toolName` controls the localized title; `toolIcon` and `meta.icon` control visual identity. Never infer one from the other.
+6. Accept only valid platform icon definitions: `type` is `svg`, `image`, `font`, `emoji`, or `lottie`; `value` is non-empty; optional `color` and `alt` are strings; optional `size` is finite, positive, and at most 64. Prefer a small static SVG for monochrome tool icons.
+7. Treat inline SVG as trusted static code owned by the plugin or platform. Do not derive it from model output or user content, and do not include scripts, event handlers, `foreignObject`, external resources, credentials, or tenant-specific data. Image icons must use stable governed assets, not expiring grants or private URLs.
+8. Keep ChatKit generic. Never add `if (toolName === '...')` icon branches or import business icons into shared tool-row components. New execution events should carry the resolved icon directly; historical events may resolve the middleware icon through their Toolset/Provider identity.
+
+```ts
+const VIEW_SOURCE_ICON = {
+  type: 'svg',
+  value: '<svg viewBox="0 0 24 24" aria-hidden="true">...</svg>'
+} as const
+
+class SourceInspectionMiddleware implements IAgentMiddlewareStrategy<Options> {
+  readonly meta: TAgentMiddlewareMeta = {
+    name: 'SourceInspectionMiddleware',
+    label: { en_US: 'Source inspection', zh_Hans: '来源检查' },
+    description: { en_US: 'Inspect governed source assets.', zh_Hans: '检查受控来源资料。' },
+    icon: VIEW_SOURCE_ICON
+  }
+
+  createMiddleware() {
+    return {
+      tools: [
+        tool(viewSource, {
+          name: 'source_view',
+          description: 'View one governed source.',
+          schema: viewSourceSchema,
+          verboseParsingErrors: true,
+          metadata: {
+            toolName: { en_US: 'View source', zh_Hans: '查看来源' }
+          }
+        }),
+        tool(approveSource, {
+          name: 'source_approve',
+          description: 'Approve one reviewed source.',
+          schema: approveSourceSchema,
+          verboseParsingErrors: true,
+          metadata: {
+            toolName: { en_US: 'Approve source', zh_Hans: '确认来源' },
+            toolIcon: { type: 'emoji', value: '✅', alt: 'Approved source' }
+          }
+        })
+      ]
+    }
+  }
+}
+```
+
+When changing the host runtime rather than a plugin, keep icon inheritance in the common middleware assembly path so normal Agent middleware, plan-mode/client tools, and hidden or built-in subgraphs behave consistently. Normalize the resolved icon once when emitting the ChatKit component step, and keep the Provider icon endpoint as the compatibility path for stored events that only contain Toolset identity.
 
 ## Return allowlisted DTOs
 
@@ -159,7 +254,7 @@ Use this pattern for Agent tools that edit drafts, semantic models, configuratio
 
 1. Let the Agent express intent while the service owns revision, concurrency, validation, and persistence. Prefer high-level intent tools such as `add_measure`, `configure_relationship`, or `update_step` over model-authored whole-document saves.
 2. Expose a small workflow: `get_*_context` for current revision, object indexes, counts, validation summary, and busy state; `get_*_schema` or `get_*_capabilities` before referencing new fields/actions; narrow intent mutation tools for common changes; raw patch only as a fallback for unsupported edits.
-3. Put `targetId`, optional `operationId`, optional `baseRevision`, and bounded `changeSummary` on every draft mutation. Resolve omitted current target IDs only from trusted Workbench/runtime state.
+3. Put `targetId`, optional `operationId`, and optional `baseRevision` on every draft mutation. Add bounded `changeSummary` only when the mutation needs a runtime-specific display description, following [Design ChatKit titles and change summaries](#design-chatkit-titles-and-change-summaries). Resolve omitted current target IDs only from trusted Workbench/runtime state.
 4. Treat `baseRevision` as planning context and audit evidence, not as a model-owned lock. The service should read the current authoritative draft when applying the mutation.
 5. Make `operationId` idempotent. Store the compact mutation receipt for the last or relevant operation IDs; if the same operation is retried, return the stored receipt instead of applying the change again.
 6. Apply the mutation as the smallest deterministic delta. Avoid replacing the full draft when the intent only adds or updates one field, item, relationship, or visibility flag.
@@ -167,7 +262,7 @@ Use this pattern for Agent tools that edit drafts, semantic models, configuratio
 8. Persist through compare-and-swap: read current draft, apply the delta, validate the resulting draft, save only if the stored revision still matches, and return a compact receipt with `revision`, changed paths/object IDs, operation count, validation summary, and stable conflict/busy codes.
 9. Allow at most one service-owned safe rebase when the delta is guarded, idempotent, and scoped to a small intent. Report `rebasedFromRevision` or an equivalent field in the receipt. Do not let the Agent loop indefinitely; after a failed precondition or busy draft, re-read context and retry at most once.
 10. Choose the draft write strategy by the plugin's existing collaboration substrate. If the plugin already implements Yjs/CRDT collaborative editing, represent Agent changes through the same collaboration protocol: presence/focus, CRDT operations, remote-change merge, materialization, and existing conflict policy. If the plugin does not already use Yjs/CRDT, use the simplest server-draft strategy: let Agent mutations write the authoritative server draft directly and supersede browser-local or autosave drafts without checking whether the frontend has saved. Do not add locks, leases, or unsaved-draft gates solely for Agent edits. Still use `operationId`, guarded deltas, compare-and-swap, validation, and compact receipts; surface conflicts only for guarded precondition failures, genuine server busy states, authorization failures, or validation failures.
-11. Emit running/success/fail events for every user-visible mutation that has `changeSummary`. Serialize writes per target resource when multiple tool calls can mutate the same draft, and let the Workbench refresh only after mutation success.
+11. Emit running/success/fail events for every user-visible mutation that has `changeSummary`; otherwise use the localized fixed tool title. Strip `changeSummary` from ChatKit-visible structured details. Serialize writes per target resource when multiple tool calls can mutate the same draft, and let the Workbench refresh only after mutation success.
 12. Keep mutation results compact. Return receipts and diagnostics, not the full draft. Provide explicit read tools for a refreshed summary, item details, or paged content.
 
 ## Model long-running work as jobs
@@ -202,6 +297,9 @@ Cover at least:
 11. revisioned draft behavior: guarded destructive patches, one safe service-owned rebase, duplicate `operationId` handling, stale preconditions, busy drafts, CRDT-backed Agent operations when collaboration already exists, direct server-draft overwrite when it does not, and Workbench refresh events
 12. MCP `tools/list`, annotations, visibility, `structuredContent`, output schema, and app-only access enforcement
 13. actionable LangChain parsing errors with `verboseParsingErrors: true`
+14. localized `metadata.toolName` selection and fallback for Agent middleware tools
+15. fixed-title tools omit unnecessary `changeSummary`; dynamic summaries drive progress titles but are absent from all emitted ChatKit structured input/output details
+16. middleware `meta.icon` inheritance, explicit `metadata.toolIcon` precedence, supported icon validation, Provider icon serialization for historical events, and generic ChatKit rendering without business tool-name branches
 
 Reject these anti-patterns during review:
 
@@ -213,3 +311,6 @@ Reject these anti-patterns during review:
 6. returning complete files, base64, public internal URLs, or Workspace paths
 7. using one generic tool for unrelated reads and writes
 8. duplicating the native middleware surface as MCP without an external portability requirement
+9. copying the same `toolIcon` onto every tool instead of defining `meta.icon` once
+10. setting the host-reserved `middlewareIcon` directly from plugin code
+11. hardcoding business tool names or business icon imports in shared ChatKit components
