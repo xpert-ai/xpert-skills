@@ -31,7 +31,7 @@ Treat 1,000 lines as an architecture-review threshold for maintained source file
 8. Persist reviewable business data with evidence, confidence, status, and failure state.
 9. Add a Workbench or extension view for human review and operational actions.
 10. When the app publishes previews or share links, read [references/artifact-share-links.md](references/artifact-share-links.md) and use the platform Artifacts and Workspace Files capabilities.
-11. Provide an Assistant template so users can create the business assistant in one step.
+11. Provide an Assistant template for first-time installation and subsequent in-place upgrades. Before installing or upgrading an Assistant, read [references/assistant-template-lifecycle.md](references/assistant-template-lifecycle.md); update an existing instance through `Assistant Settings` -> `Update from Template` instead of creating a duplicate from the wizard.
 12. Build and register the plugin from an independent plugin repository.
 13. Validate with unit, integration, manifest, and end-to-end tests.
 
@@ -402,6 +402,8 @@ Add tests for the whole event contract:
 
 Contribute an Assistant template so users do not manually assemble middleware, prompts, model settings, state variables, and starter prompts.
 
+Treat template installation and template upgrade as different lifecycle operations. Read [references/assistant-template-lifecycle.md](references/assistant-template-lifecycle.md) before acting. For an existing digital expert, open its canvas, use `Assistant Settings` -> `Update from Template`, review the graph changes, then save and publish the same Xpert. Do not use the creation wizard or manually redraw the graph as an upgrade mechanism.
+
 Template contribution should include:
 
 - `type: XpertTypeEnum.Agent`
@@ -488,7 +490,7 @@ Before finishing, verify:
 - Remote component table views use scalar query parameters, remote pagination, per-tab filters, and total/page/pageSize metadata instead of fetching all rows into the iframe.
 - Source and test code do not use broad type escape hatches (`as any`, `as unknown as`, `: any`, `: unknown`) except for a deliberately isolated compatibility helper; concrete library, SDK, bridge, and mock types are used instead.
 - User-visible text uses the shared typed i18n facade; maintained components contain no inline locale-to-text branches, catalogs pass key/parameter completeness checks, and locale/platform/third-party mappings stay in explicit adapter boundaries.
-- Assistant template includes required plugins/capabilities and practical starter prompts; Project-scoped apps use a distinct persisted `workspaceProjectId`, declare the intended `workspaceScope` policy, and bind Primary and subagent conversations, files, FileAssets, and runs to that same trusted Project.
+- Assistant template includes required plugins/capabilities and practical starter prompts; upgrading an installed Assistant uses `Assistant Settings` -> `Update from Template`, preserves the existing Xpert id/slug and operational bindings, and does not create a wizard-based duplicate unless the user explicitly requests a separate instance; Project-scoped apps use a distinct persisted `workspaceProjectId`, declare the intended `workspaceScope` policy, and bind Primary and subagent conversations, files, FileAssets, and runs to that same trusted Project.
 - Tests cover service behavior, middleware tool calls, manifest/view actions, remote component bridge behavior, and end-to-end user flow.
 - Interactive Remote View prototypes follow the prototype-as-production standard: one maintained TSX/shadcn/Tailwind implementation and one generated asset set serve preview and production; only the typed Preview Fixture versus real View Provider adapter changes, with no credentials, production data, disposable native HTML/CSS source, or preview-specific business-component branch.
 - Substantive Workbench UI changes follow the E2E and visual-validation reference: real built assets, semantic UI and host-state assertions, deterministic screenshot evidence when visual behavior matters, and installed-platform validation for platform-dependent integrations.
