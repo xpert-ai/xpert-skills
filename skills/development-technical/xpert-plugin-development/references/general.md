@@ -265,6 +265,17 @@ Select scope from the declared level instead of from whichever identifier happen
 
 When username/password login is used, the command may infer the tenant from the authenticated user response; `--tenant-id <id>` remains available for an explicit override. Do not guess tenant or organization identifiers; discover the non-secret identifier from the local environment or ask the user.
 
+### Deployment state and Assistant lifecycle
+
+Keep these checkpoints distinct:
+
+1. **Built:** package and generated assets passed their checks.
+2. **Staged:** the platform accepted or refreshed the plugin descriptor and files.
+3. **Running:** the API restarted when required and the plugin bootstrapped successfully; an observable provider, View, route, or tool call works.
+4. **Assistant initialized and published:** a new Assistant was provisioned or an existing one was updated from the template, then saved, published, and tested.
+
+`staged successfully`, descriptor visibility, and `restartRequired: true` do not prove runtime loading. Plugin deployment also does not initialize or publish an Assistant. Verify the plugin runtime first, then perform the Assistant lifecycle separately; update an existing Assistant in place unless the user explicitly requests another instance.
+
 ## Authentication and missing-credentials procedure
 
 Resolve authentication in this order:

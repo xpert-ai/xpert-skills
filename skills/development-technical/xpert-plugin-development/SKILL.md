@@ -42,9 +42,10 @@ Treat 1,000 lines as an architecture-review threshold for maintained source file
 14. If the task is about Yjs/CRDT state, collaborative editing, WebSocket sessions, presence, remote cursors, user/Agent co-editing, state-vector synchronization, or plugin business-state materialization, read `references/collaboration.md`.
 15. If the task is about `.xpertai-plugin/plugin.json`, plugin-managed MCP servers, MCP tool metadata, `ui://` resources, MCP Apps, or ChatKit inline app rendering, also read `references/mcp-tools-and-apps.md`.
 16. If the task is about Xpert skill-only plugins, Codex-to-Xpert skill conversion, skill marketplace cards, skill resource installation, skill document dialogs, or ClawXpert skill trial flows, also read `references/skill-only-plugins.md`.
-17. Prefer the platform's `plugin:deploy:local` command for local development. It builds, tests, refreshes an existing `source=code` plugin or installs it on first use, and verifies the loaded descriptor. Use the manual `source=code + sourceConfig.workspacePath` flow only when that command is unavailable.
+17. Prefer the platform's `plugin:deploy:local` command for local development. It builds, tests, refreshes an existing `source=code` plugin or installs it on first use, and verifies the loaded descriptor. Use the manual `source=code + sourceConfig.workspacePath` flow only when that command is unavailable. Treat a staged descriptor as registration evidence only; restart when required and verify runtime loading separately.
 18. Prefer configured Xpert username/password credentials for local deployment. The platform CLI logs in for a fresh JWT, uses it only for the current process, and may infer the tenant from the login response. Treat an explicit `--token` as an intentional override; keep `XPERT_TOKEN` and the legacy token Keychain item only as compatibility fallbacks. Follow the credential setup procedure in `references/general.md`; never extract browser credentials or ask the user to paste a password or token into chat.
-19. Before finishing, verify build output, installation, runtime behavior, and submit only relevant files.
+19. When the plugin contributes an Assistant template, deploy and verify the plugin first, then provision a new Assistant or update the existing one from the template as a separate lifecycle. Plugin deployment never proves Assistant initialization or publication.
+20. Before finishing, verify build output, installation, runtime behavior, and submit only relevant files.
 
 ## Plugin Levels and System-Level Artifact Isolation
 
@@ -57,6 +58,11 @@ Choose `meta.level` from the plugin's runtime class and allowed installation sco
 Treat a plugin that registers or exposes host server capabilities such as TypeORM entities, controllers, server modules, routes, or equivalent process-global infrastructure as system-level. Choose `system` or `tenant` according to its tenant eligibility; never use `organization` for this kind of plugin. Both system-level values require a stable `meta.artifactNamespace`; do not rely on the package-name compatibility fallback.
 
 Use the same `artifactNamespace` as the source of every plugin-owned artifact name. Build database table names, controller route prefixes, provider/view/registry keys, queue identifiers, and other process-global or persisted unique strings through a shared namespace constant and contract-appropriate helper. Do not scatter copied namespace literals or create unnamespaced identifiers that can drift during later refactors. Keep package or bundle metadata aligned with runtime metadata, and test the namespace plus all derived artifact names. See `references/general.md` for the required naming and validation pattern.
+
+## Deployment State and Assistant Lifecycle
+
+- `staged successfully`, descriptor visibility, or `restartRequired: true` means the plugin was registered or copied; it does not prove the module is running. Restart the API when required, then verify bootstrap plus an observable provider, View, route, or tool call.
+- Plugin deployment and Assistant initialization are separate. Deploy and verify the plugin first; then provision or update, save, publish, and test the Assistant independently without creating a duplicate instance unintentionally.
 
 ## Rules
 
