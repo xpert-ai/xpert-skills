@@ -14,6 +14,17 @@ Read this reference when implementing React Workbench or remote component UI wit
 - **Build output**: Build the shared UI package before consumer bundles. Regenerate `app.js` and `app.css`; never edit generated assets manually.
 - **Validation**: Scan maintained UI source for native dialogs and stale private imports, then exercise the affected interaction in the browser.
 
+## Default Extension View Baseline
+
+When the task does not specify another visual system, React Extension Views and Workbench Remote Views use shadcn UI, Tailwind CSS, the Xpert host theme installer, and a bounded Studio layout by default.
+
+- Build Tailwind from the Remote View's maintained TSX. Add a source directive for the consumer tree, such as `@source "./**/*.{ts,tsx}"`, and verify representative consumer utilities exist in the emitted `app.css`. The shared package's stylesheet only scans shared component source.
+- Keep `html`, `body`, `#root`, and the application shell at `width: 100%` and `height: 100%`. Put `min-width: 0`, `min-height: 0`, and `overflow: hidden` on every relevant grid/flex ancestor so a child cannot expand the host surface.
+- Give side panels their own bounded `ScrollArea` or `overflow-y: auto`. Make panels collapsible when they reduce the useful width of the primary workspace; validate both states and a constrained host width.
+- Use React state for ephemeral disclosure. Do not add Web Storage merely to remember panel state; use a platform persistence contract only when the product explicitly requires durable state.
+- Keep custom CSS focused on layout, overflow, responsive behavior, and genuinely domain-specific visuals. Use Tailwind utilities and semantic variables for ordinary spacing, typography, borders, surfaces, and states.
+- Replace native form controls, browser dialogs, text glyphs, and emoji with shared shadcn primitives and the repository icon contract when equivalents exist.
+
 ## Host Theme Bridge Contract
 
 Treat host theme installation as a required remote-entry concern. Loading the shared stylesheet is necessary but does not install runtime theme variables.
@@ -21,7 +32,7 @@ Treat host theme installation as a required remote-entry concern. Loading the sh
 The host initializes Xpert tokens such as `--xui-color-border`. Shadcn and Tailwind utilities consume semantic variables such as `--border`, `--input`, and `--ring`. Install the mapping after applying the host tokens and repeat it whenever the host theme changes:
 
 ```ts
-import { installShadcnThemeVars } from '@xpert-ai/shadcn-ui/theme'
+import { installShadcnThemeVars } from '@xpert-ai/plugin-shadcn-ui/theme'
 
 function installHostTheme(theme: RemoteTheme) {
   applyThemeTokens(theme)
@@ -29,7 +40,8 @@ function installHostTheme(theme: RemoteTheme) {
 }
 ```
 
-- Import the installer from the stable lightweight `@xpert-ai/shadcn-ui/theme` export. Do not import the complete shared component package only to install theme variables.
+- Import the installer from the stable lightweight `@xpert-ai/plugin-shadcn-ui/theme` export when the workspace exposes it. Do not import the complete shared component package only to install theme variables.
+- Some plugin workspaces expose the same installer from `@xpert-ai/plugin-shadcn-ui`; use that workspace's canonical shared export rather than copying the implementation into an individual View. `installShadcnCssVar` is a compatibility alias, not the preferred new API name.
 - Forward and apply the host `density` (`default` or `compact`) together with color scheme, radius, typography, and color tokens.
 - Centralize this logic in the shared remote bridge or entry bootstrap when several Views share a runtime. Do not rely on each screen component to install the theme.
 - Do not assume `@xpert-ai/plugin-shadcn-ui/style.css` maps host variables by itself.
