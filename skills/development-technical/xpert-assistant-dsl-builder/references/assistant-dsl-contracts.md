@@ -59,6 +59,11 @@ Rules:
 
 Treat exported organization-bound YAML as an instance snapshot, not as reusable source, unless the repository explicitly owns that snapshot.
 
+The complete public team and Agent property indexes live in
+[team-properties.md](team-properties.md) and [agent-properties.md](agent-properties.md).
+Do not infer Studio feature placement from a contribution property; use
+[features-and-ui-mapping.md](features-and-ui-mapping.md).
+
 ## Node And Connection Contract
 
 Every connection must reference existing `from` and `to` node keys. Match the connection type to the nodes it joins.
@@ -264,6 +269,12 @@ export const templates: XpertTemplateContribution[] = [{
   dslContent: readDsl()
 }]
 ```
+
+Generate repeated product identity from one typed definition. In particular,
+XpertTemplateContribution.startPrompts and enabled
+team.features.opener.questions are separate fields consumed by different
+layers. Keep them equal through generation and a parsed-object contract test.
+See [template-contribution.md](template-contribution.md).
 
 Rules:
 

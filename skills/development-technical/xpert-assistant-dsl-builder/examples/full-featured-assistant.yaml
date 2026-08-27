@@ -1,0 +1,164 @@
+team:
+  name: example-full-featured-assistant
+  type: agent
+  title: Full Featured Assistant
+  description: Reusable example showing property placement rather than product behavior.
+  avatar:
+    emoji: { id: bar_chart, colons: ':bar_chart:', unified: 1F4CA }
+    background: rgba(224, 233, 248, 0.96)
+  options:
+    workspaceScope:
+      mode: project-preferred
+    templateKey: example-full-featured-assistant
+    bootstrap:
+      source: template
+      templateKey: example-full-featured-assistant
+      workspaceKind: org-default
+    agent:
+      Agent_Coordinator: { position: { x: 360, y: 20 } }
+      Agent_Analyst: { position: { x: 720, y: 220 } }
+    position: { x: 24, y: 220 }
+    scale: 0.8
+  agentConfig:
+    recursionLimit: 200
+    maxConcurrency: 4
+    stateVariables:
+      - type: string
+        name: caseId
+        description: Current bounded Case identifier.
+        optional: true
+    mute:
+      - [Agent_Analyst]
+  memory:
+    enabled: false
+  summarize:
+    enabled: true
+    maxMessages: 40
+    retainMessages: 12
+  features:
+    opener:
+      enabled: true
+      message: ''
+      questions:
+        - Summarize the current operating status.
+        - Show the highest-risk items.
+    suggestion:
+      enabled: true
+      prompt: Suggest concise follow-up questions grounded in the current answer.
+    attachment:
+      enabled: true
+      type: upload
+      maxNum: 5
+      fileTypes: [document, image]
+    memoryReply:
+      enabled: false
+    sandbox:
+      enabled: false
+    title:
+      enabled: true
+      instruction: Generate a short task title.
+  version: '1'
+  agent:
+    key: Agent_Coordinator
+  copilotModel:
+    referencedId: null
+    modelType: llm
+    model: qwen3.6-plus
+    options:
+      context_size: 256000
+      temperature: 0.2
+      maxRetries: 4
+  knowledgebases: []
+  toolsets: []
+  tags: []
+nodes:
+  - type: agent
+    key: Agent_Coordinator
+    position: { x: 360, y: 20 }
+    entity:
+      key: Agent_Coordinator
+      name: coordinator
+      title: Coordinator
+      description: Delegates bounded analysis work and communicates results.
+      prompt: |
+        Delegate bounded metric analysis to Agent_Analyst.
+        Return a compact answer with the time range, filters, findings, and risks.
+      promptTemplates: null
+      parameters: null
+      outputVariables: null
+      options:
+        parallelToolCalls: false
+      copilotModel: null
+      leaderKey: null
+      collaboratorNames: []
+      toolsetIds: []
+      knowledgebaseIds: []
+  - type: agent
+    key: Agent_Analyst
+    position: { x: 720, y: 220 }
+    entity:
+      key: Agent_Analyst
+      name: analyst
+      title: Analyst
+      description: Reads bounded metrics through its own middleware.
+      prompt: |
+        Analyze only the supplied organization-scoped request.
+        Cite tool-returned values and never invent missing metrics.
+      promptTemplates: null
+      parameters:
+        - type: string
+          name: rangePreset
+          description: Requested reporting range.
+          optional: false
+        - type: array[string]
+          name: metricGroups
+          description: Bounded metric groups to query.
+          optional: false
+          maximum: 10
+      outputVariables: null
+      options:
+        disableMessageHistory: true
+        parallelToolCalls: false
+        retry:
+          enabled: true
+          stopAfterAttempt: 2
+        structuredOutputMethod: jsonSchema
+        attachment:
+          enabled: true
+          variable: attachments
+          resolution: high
+          maxNum: 5
+        fileUnderstanding:
+          enabled: true
+        middlewares:
+          order: [Middleware_Analytics]
+      copilotModel: null
+      leaderKey: Agent_Coordinator
+      collaboratorNames: []
+      toolsetIds: []
+      knowledgebaseIds: []
+  - type: workflow
+    key: Middleware_Analytics
+    position: { x: 720, y: 520 }
+    entity:
+      type: middleware
+      key: Middleware_Analytics
+      name: Analytics
+      title: Read-only analytics
+      provider: ExampleAnalyticsMiddleware
+      options:
+        mode: readonly
+      tools:
+        query_metrics: true
+        mutate_case: false
+connections:
+  - type: agent
+    key: Agent_Coordinator/Agent_Analyst
+    from: Agent_Coordinator
+    to: Agent_Analyst
+    required: true
+  - type: workflow
+    key: Agent_Analyst/Middleware_Analytics
+    from: Agent_Analyst
+    to: Middleware_Analytics
+    required: true

@@ -1,0 +1,42 @@
+team:
+  name: example-minimal-assistant
+  type: agent
+  title: Minimal Assistant
+  description: Smallest reusable Agent Assistant example.
+  features:
+    opener:
+      enabled: true
+      message: ''
+      questions:
+        - Explain what you can do.
+  version: '1'
+  agent:
+    key: Agent_Coordinator
+  copilotModel:
+    referencedId: null
+    modelType: llm
+    model: qwen3.6-plus
+    options:
+      temperature: 0.2
+  knowledgebases: []
+  toolsets: []
+  tags: []
+nodes:
+  - type: agent
+    key: Agent_Coordinator
+    position: { x: 320, y: 20 }
+    entity:
+      key: Agent_Coordinator
+      name: coordinator
+      title: Coordinator
+      prompt: You are a concise coordinator.
+      promptTemplates: null
+      parameters: null
+      outputVariables: null
+      options: null
+      copilotModel: null
+      leaderKey: null
+      collaboratorNames: []
+      toolsetIds: []
+      knowledgebaseIds: []
+connections: []

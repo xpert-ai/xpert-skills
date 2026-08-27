@@ -1,160 +1,115 @@
 ---
 name: xpert-assistant-dsl-builder
-description: Build, update, review, and diagnose Xpert Assistant YAML DSL graphs. Use when designing single- or multi-Agent Assistants; deciding when to delegate to context-isolated subagents; wiring leaderKey and Agent, middleware, tool, workflow, or knowledge connections; assigning least-privilege capabilities by Agent role; validating templates; or installing, publishing, and runtime-validating an Assistant.
+description: Build, update, review, and diagnose Xpert Assistant YAML DSL graphs. Use when designing single- or multi-Agent Assistants; mapping Studio properties such as opener questions, memory, files, models, middleware, tools, knowledge, and runtime options; wiring leaderKey and graph connections; validating plugin template contributions; or installing, publishing, and runtime-validating an Assistant.
 ---
 
 # Xpert Assistant DSL Builder
 
-Build Xpert Assistant DSLs as explicit runtime graphs. Treat the source DSL, optional template contribution, installed Assistant draft, published graph, execution tree, and persisted outputs as separate artifacts that must agree.
+Build Assistant DSLs from the current Xpert platform contract, not from memory or a copied example. Treat source definitions, plugin contributions, generated YAML, installed drafts, published graphs, and runtime executions as separate layers that must agree.
 
-## Required Reading
+## Start Here
 
-Read [references/assistant-dsl-contracts.md](references/assistant-dsl-contracts.md) before editing an Assistant DSL or template contribution.
+1. Run `node scripts/inspect-dsl-contract.mjs` from this skill before editing a DSL. Resolve contract drift before relying on the bundled schema.
+2. Read [contract-sources.md](references/contract-sources.md) and [assistant-dsl-contracts.md](references/assistant-dsl-contracts.md).
+3. Route to the references needed by the task:
 
-Read [references/lifecycle-validation.md](references/lifecycle-validation.md) before importing, updating, publishing, or runtime-validating an Assistant.
+| Task | Required reference |
+|---|---|
+| Team identity, model, memory, runtime, canvas | [team-properties.md](references/team-properties.md) |
+| Agent prompt, parameters, tools, attachment, delegation | [agent-properties.md](references/agent-properties.md) |
+| Studio 功能, opener questions, suggestion, speech, upload | [features-and-ui-mapping.md](references/features-and-ui-mapping.md) |
+| Plugin template metadata and cross-layer generation | [template-contribution.md](references/template-contribution.md) |
+| Child Agent isolation and task/result contracts | [subagent-context-isolation.md](references/subagent-context-isolation.md) |
+| Import, publish, and runtime verification | [lifecycle-validation.md](references/lifecycle-validation.md) |
 
-Read [references/subagent-context-isolation.md](references/subagent-context-isolation.md) when deciding whether to add a child Agent, defining its task packet, or assigning a role-specific subset of middleware tools and knowledge.
+Use [examples/minimal-agent.yaml](examples/minimal-agent.yaml) for the smallest graph and [examples/full-featured-assistant.yaml](examples/full-featured-assistant.yaml) for property placement. Examples demonstrate shape; current host contracts remain authoritative.
 
-## Workflow
+## Contract Authority
 
-1. Discover the owning repository and current platform contracts instead of assuming paths or schema versions.
-2. Inspect the source DSL, nearby tests, host contract types, and one working Assistant graph from the same platform version.
-3. Define each Agent's responsibility and task/result contract; use [references/subagent-context-isolation.md](references/subagent-context-isolation.md) to justify every child Agent.
-4. Edit nodes, connections, prompts, dependencies, version markers, and structural tests together.
-5. Run the bundled validator, focused repository tests, type checks, build, and `git diff --check`.
-6. If a plugin contributes the template, refresh that plugin and verify the loaded contribution.
-7. Import a new Assistant or explicitly update the intended draft. Preserve user-owned model, credential, and knowledge bindings unless replacement is requested.
-8. Publish a new version and verify the published graph rather than only the draft.
-9. Run one bounded task and inspect the execution tree plus persisted outputs before wider testing.
+Use this order of authority:
 
-## Establish Responsibilities First
+1. Current host DTOs and TypeScript contracts listed in `schemas/contract-manifest.json`.
+2. The installed `@xpert-ai/contracts` and `@xpert-ai/plugin-sdk` versions of the owning repository.
+3. `schemas/assistant-dsl.schema.json` and the reference files in this skill.
+4. A working graph from the same platform version.
 
-Prefer the smallest graph that gives every Agent one clear responsibility:
+The schema is a versioned, strict snapshot of core reusable fields. `inspect-dsl-contract.mjs` hashes authoritative sources and reports drift. Do not silently extend the schema when the host changed; inspect the host, update the manifest, schema, field references, examples, and validator together.
 
-```text
-Coordinator
-  -> per-item Worker
-       -> retrieval Specialist
-       -> validation Specialist
-```
+## Build From One Definition
 
-Adapt the roles to the use case. Add dispatchers, iterators, reviewers, or other specialists only when the runtime contract requires them. A direct follower is sufficient when its parent can delegate a bounded task.
-
-Assign authority explicitly:
-
-- Coordinator: global planning, fan-out, reconciliation, and user communication.
-- Worker: exactly one item or bounded unit of work, child delegation, and a compact result.
-- Specialist: one capability or knowledge domain and only the tools required for it.
-- Review Agent or human review surface: approval and other controlled actions when the workflow requires them.
-
-Enforce authority through graph connections and tool exposure. Do not rely on prompts as the only permission boundary.
-
-## Encode The Agent Graph
-
-For every child Agent:
-
-1. Add an `agent` node with a stable conceptual key.
-2. Set `entity.leaderKey` to its direct parent Agent key.
-3. Add exactly one incoming `type: agent` connection from that parent.
-4. Set `required: true` when the child is required for the workflow.
-5. Set `options.disableMessageHistory: true` only when the child should start each new invocation round without its own prior-round messages. This flag does not control parent-to-child context transfer.
-6. Attach only the middleware, Skills, tools, and knowledge sources that the child itself must use.
-
-Keep `team.agent.key` aligned with the primary Agent node. Use `team.agentConfig.mute` only when an internal Agent's streamed text should not appear in the user conversation; its compact result must still return through the Agent edge.
-
-Do not confuse an Agent middleware workflow node with an Agent node. Middleware providers expose model-callable tools; Agent connections establish delegation.
-
-## Isolate Capabilities And Knowledge
-
-Assume that child Agents do not inherit a parent or sibling's tool or knowledge connection.
-
-- Connect each knowledge base directly to the Agent that retrieves from it.
-- Connect middleware directly to the Agent that calls its tools.
-- Disable unrelated or privileged tools for specialist Agents.
-- Keep organization-specific resource IDs out of reusable DSLs.
-- Bind instance-owned models, credentials, and knowledge after creating or importing the Assistant when appropriate.
-- Align `knowledgebaseIds` with knowledge nodes and connections when the current draft schema stores both.
-
-When an Agent reports that a capability is unavailable, inspect graph ownership and runtime bindings before broadening its permissions.
-
-## Declare Optional Template Dependencies
-
-When a plugin contributes the Assistant template, keep required plugin names aligned across plugin metadata, `targetAppMeta.requiredPlugins`, DSL options, and the contribution.
-
-Declare the owner of every cross-plugin Skill dependency explicitly:
+For generated plugin templates, define identity and feature data once and render every delivery layer from it:
 
 ```ts
-const templateSkills = [{
-  pluginName: SKILL_OWNER_PLUGIN_NAME,
-  componentKey: SKILL_COMPONENT_KEY,
-  targetAgentKey: 'Agent_Coordinator'
-}]
+const definition = {
+  key: 'operations-analyst',
+  title: '流程运营分析助手',
+  description: '解释组织级运营指标。',
+  avatar: ANALYST_AVATAR,
+  startPrompts: ['最近 30 天运营情况如何？']
+}
+
+return {
+  ...definition,
+  startPrompts: definition.startPrompts,
+  dslContent: buildDsl({
+    ...definition,
+    features: {
+      opener: { enabled: true, message: '', questions: definition.startPrompts }
+    }
+  })
+}
 ```
 
-Verify that `targetAgentKey` exists and that the target Agent has the middleware connection required by the current runtime. Skip plugin contribution work for Assistant DSLs that are not distributed through plugins.
+Do not maintain the same title, avatar, or question list as unrelated literals. At minimum keep these equal:
 
-## Write Contract Prompts
+- contribution `key/title/description/avatar/startPrompts`;
+- DSL `team.name/title/description/avatar`;
+- Studio opener `team.features.opener.questions` when opener is enabled;
+- primary Agent identity when the product intentionally presents it as the Assistant identity.
 
-State the following in each Agent prompt:
+`startPrompts` is catalog/application metadata, while `team.features.opener.questions` is the Studio “功能 → 对话开场白 → 开场白问题” configuration. Generate both from one source because installation paths do not implicitly synchronize them.
 
-- exact role and task boundary;
-- required input identifiers and fields;
-- which child Agent or tool to call and in what order;
-- validity and freshness rules for temporary identifiers or retrieved evidence;
-- required output or persistence action;
-- compact result fields;
-- prohibited actions and escalation conditions;
-- behavior for no result, partial evidence, stale input, missing capability, and schema rejection.
+## Design Responsibilities Before Graphs
 
-Keep tenant, organization, Assistant, conversation, credential, and knowledge-base IDs out of reusable prompts. Return references or compact summaries instead of copying large tool responses through every parent layer.
+Give every Agent one bounded responsibility. Add a child Agent only when it needs an isolated prompt, context, capability boundary, lifecycle, or reusable runtime entrypoint. Enforce authority with direct graph connections and tool exposure rather than prompts alone.
 
-Define parent-to-child context explicitly through the delegated task input, state variables, prompt templates, and graph connections. Do not use `disableMessageHistory` as a parent-history inheritance or filtering control.
+For each child Agent:
 
-When a child depends on multiple correctness-critical identifiers or bounded collections, define them as the child Agent's `entity.parameters` instead of relying on a prose task packet. The parent must populate those named fields in the Agent tool call; keep the runtime-added `input` field for a concise objective only. Render the parameters in the child prompt (for example `{{caseId}}`) so the child reasons over the validated state values, and keep server-side scope validation as the final authority.
+1. Add a stable `agent` node.
+2. Set `entity.leaderKey` to its direct parent.
+3. Add exactly one incoming `type: agent` connection from that parent.
+4. Attach only the middleware, tools, Skills, and knowledge it directly uses.
+5. Define structured `entity.parameters` for correctness-critical identifiers.
+6. Return a compact result contract and cover missing, stale, partial, or rejected inputs.
 
-## Validate Structure
+Child Agents do not inherit a parent or sibling's connections. `disableMessageHistory` controls that Agent's own cross-round history; it is not a parent-context switch. Use `team.agentConfig.mute` only to hide internal streamed narration, not to suppress its result.
 
-Parse YAML and assert graph objects rather than string fragments. Verify:
+## Validate Before Delivery
 
-- exact Agent keys and primary Agent;
-- every child `leaderKey` and Agent connection;
-- no cycles, duplicates, or dangling connection endpoints;
-- each Agent's own cross-round message-history policy and mute paths;
-- middleware, Skill, tool, and knowledge ownership;
-- required template dependencies when present;
-- absence of instance-owned IDs in reusable DSLs;
-- source/build parity when the build copies the DSL;
-- a deliberate `team.version` change for graph contract updates.
-
-Run the bundled validator before repository tests:
+Run:
 
 ```bash
+node <skill-dir>/scripts/inspect-dsl-contract.mjs
 node <skill-dir>/scripts/validate-assistant-dsl.mjs \
   path/to/assistant.yaml \
   --contribution-source path/to/template-contribution.ts \
   --built-yaml path/to/dist/assistant.yaml
 ```
 
-Omit optional flags when they do not apply. Treat validator warnings as review items; current host contracts and repository tests remain authoritative.
+The validator checks public field names, identity, opener alignment, graph endpoints, Agent hierarchy, parameters, capability ownership, reusable-resource safety, contribution Skill targets, and source/build parity. Add repository tests for generated DSL because a TypeScript contribution cannot always be reconstructed safely by static text parsing.
 
-## Validate The Installed Runtime
+Then run focused tests, type checks, build, and `git diff --check`. Increment `team.version` for graph, prompt contract, features, memory, model, dependency, or runtime option changes.
+
+## Validate Every Runtime Layer
 
 Verify in order:
 
-1. Loaded source or template version.
-2. Installed Assistant draft graph and instance-owned bindings.
-3. Skill and middleware installation state.
-4. Published graph, not only the draft.
-5. One-task execution tree and expected child/tool calls.
-6. Persisted outputs or artifacts.
-7. Absence of calls that violate role boundaries.
+1. source definition and generated YAML;
+2. loaded plugin contribution;
+3. installed draft, including instance-owned bindings;
+4. published graph and published Assistant properties;
+5. one bounded execution tree and persisted outputs.
 
-Refreshing a template source does not automatically rewrite an existing Assistant. Updating a draft does not automatically update its published version. Use a fresh conversation when stale checkpoints or cached graph state could affect the result.
+Refreshing a plugin does not rewrite an installed Assistant. Saving a draft does not publish it. Preserve user-owned models, credentials, environments, knowledge bases, and organization scope unless the user explicitly authorizes replacement.
 
-## Version Deliberately
-
-Increment `team.version` for graph, role, prompt-contract, or dependency changes. Bump a package or manifest version only when the delivery mechanism's release policy requires it. Update node hashes only when the repository maintains them as explicit change markers.
-
-## Completion Standard
-
-Finish only when the applicable source DSL, built asset, loaded template, installed draft, published graph, execution tree, and persisted outputs tell the same story. Report any layer not exercised and preserve unrelated worktree changes.
+Finish only when every applicable layer tells the same story. Report layers that were not exercised.

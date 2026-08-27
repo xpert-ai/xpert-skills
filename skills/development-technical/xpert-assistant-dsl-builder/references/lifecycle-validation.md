@@ -31,7 +31,10 @@ Run validation in this order:
 3. Run tests for middleware or tools used by child Agents.
 4. Run type checks and build the owning package when applicable.
 5. Confirm that built or copied DSL assets match the source.
-6. Run `git diff --check`.
+6. For generated plugin templates, compare contribution identity, avatar,
+   startPrompts, target capabilities, and dependencies with parsed team,
+   opener features, nodes, and connections.
+7. Run `git diff --check`.
 
 Do not rely on an earlier successful build after changing the DSL, its contribution metadata, dependencies, or the build copy step.
 
@@ -59,6 +62,7 @@ For a plugin-delivered template, verify:
 - DSL version and exact Agent keys;
 - required plugins and Skill dependency ownership;
 - middleware providers required by the graph.
+- startPrompts and Studio opener questions.
 
 Skip this section when no delivery layer exists.
 
@@ -106,7 +110,9 @@ Draft update and publication are separate changes.
 2. Resolve validation errors.
 3. Publish a new version with an appropriate version marker or release note.
 4. Fetch the published graph.
-5. Compare Agent nodes, connections, middleware, Skills, tools, knowledge bindings, and primary Agent against the draft.
+5. Compare Assistant identity, features, memory, model, Agent nodes,
+   connections, middleware, Skills, tools, knowledge bindings, and primary
+   Agent against the draft.
 
 Do not claim runtime readiness from the draft alone. An existing published Assistant remains on its prior graph until the platform successfully publishes the new version.
 
