@@ -238,7 +238,7 @@ corepack pnpm plugin:deploy:local \
 The command must:
 
 1. read the plugin name from `package.json`
-2. run the detected build and test scripts unless explicitly skipped
+2. run the detected build and test scripts unless explicitly skipped, then any declared `verify:dist` before deployment, including with `--skip-build`
 3. call `POST /api/plugin/refresh` for an existing local-code registration
 4. fall back to `POST /api/plugin` with `source=code + sourceConfig.workspacePath` only when the plugin is not refreshable
 5. call `POST /api/plugin/by-names` and fail when no descriptor is returned
@@ -264,6 +264,8 @@ Select scope from the declared level instead of from whichever identifier happen
 3. For `organization`, use `--scope organization` and provide `--org-id <id>` or `XPERT_ORG_ID`.
 
 When username/password login is used, the command may infer the tenant from the authenticated user response; `--tenant-id <id>` remains available for an explicit override. Do not guess tenant or organization identifiers; discover the non-secret identifier from the local environment or ask the user.
+
+Plugins that generate or copy runtime assets should define a package-specific `verify:dist`, run it at the end of their normal build, and compare source and `dist` assets by content. Name stale paths in failures and avoid concurrent generation or deployment in the same workspace.
 
 ### Deployment state and Assistant lifecycle
 
@@ -410,40 +412,4 @@ Rules:
 2. `401 Unauthorized`: token is missing, expired, or invalid; follow the safe missing-token procedure instead of extracting browser credentials
 3. config save returns `Method not implemented.`: `_validateCredentials()` is missing
 4. provider visible but runtime empty: `createTools()` and runtime tool initialization are inconsistent
-5. code changed but platform behavior is old: stale loading path or backend was not restarted
-
-## Versioning
-
-Two modes:
-
-1. Local `source=code` iteration: package version may stay stable, but install request should use a fresh `version` value
-2. npm-based validation or release: bump `package.json.version`
-
-Before PR:
-
-1. remove temporary package names
-2. remove personal npm scope changes unless intentionally publishing from that scope
-3. do not keep meaningless version drift from temporary local tests
-
-## Git and PR flow
-
-Preferred remote layout:
-
-1. `origin` -> your fork
-2. `upstream` -> `https://github.com/xpert-ai/xpert-plugins.git`
-
-Typical flow:
-
-```bash
-git fetch upstream
-git checkout <base-branch>
-git pull --ff-only upstream <base-branch>
-git checkout -b feat/<plugin-name>-update
-git push -u origin feat/<plugin-name>-update
-```
-
-Commit and PR rules:
-
-1. submit only files relevant to the current plugin change
-2. exclude cache, tarballs, lockfile drift, and local-only debug artifacts
-3. summarize testing in the PR
+5. code changed but platform behavior is old: first run `verify:dist` to distinguish stale deployable assets from runtime module loading; only after the final `dist` is current should you investigate API restart or browser caching
