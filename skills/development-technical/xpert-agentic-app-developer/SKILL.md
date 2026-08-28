@@ -267,6 +267,12 @@ Keep the boundary clear:
 
 Add a Workbench view when users must review, correct, approve, reject, upload files, or submit results. Use a remote component iframe when the UI needs custom interaction beyond declarative tables and forms. Before adding review gates, approval prompts, warnings, diagnostics, or dense detail surfaces, read [references/human-decision-load-and-progressive-disclosure.md](references/human-decision-load-and-progressive-disclosure.md); keep the system behavior thorough while minimizing mandatory user decisions and progressively disclosing non-decision information.
 
+### Business-First Information Architecture
+
+Keep one business decision on one page. Use steps only for distinct, separately completable stages; do not present context, progress, or status as navigation. Prioritize business values, status, blockers, impact, and the next action, while moving implementation identifiers and diagnostics into accessible progressive disclosure.
+
+Choose shared shadcn primitives by interaction intent: `Tooltip` or `HoverCard` for optional context, `Popover` or `DropdownMenu` for compact choices, `Dialog` for bounded tasks, `Drawer` or `Sheet` for sustained detail, and the designated alert-dialog primitive only for justified consequential confirmation. Never hide essential instructions or the only action path in hover-only UI, and preserve evidence and audit details outside the primary reading path.
+
 For React remote component views, prefer TSX as the default development mode. Implement the view as maintainable React TypeScript source, preferably `remote-components/<entry>/src/main.tsx` plus supporting `*.ts`/`*.tsx` files, and generate the iframe entry `app.js` through a repeatable build step such as esbuild. Do not hand-maintain a large `React.createElement` `app.js` as the source of truth unless the user explicitly asks for a no-build static script or the existing plugin already has a deliberate no-build convention. Keep the generated `app.js` only as the runtime artifact read by `renderRemoteReactIframeHtml`, and wire `build`, `typecheck` or an equivalent check so stale generated output is caught.
 
 Unless the user explicitly requests another design system or the existing View has a documented compatibility constraint, use this default implementation baseline for React Extension Views and Workbench Remote Views:
