@@ -6,6 +6,7 @@
 - Source and build validation
 - Delivery-source refresh
 - Draft import or update
+- Versioned suite provisioning
 - Instance-owned bindings
 - Publication
 - Runtime acceptance
@@ -52,6 +53,7 @@ When a delivery source exists:
 4. Restart the owning service when activation requires it.
 5. Fetch or inspect the loaded descriptor after refresh.
 6. Compare the loaded DSL version, Agent keys, connections, and dependencies with the source.
+7. When supported, emit a secret-free deployment manifest recording declared level, actual scope, validation status, deployed version, descriptor status, and restart requirement.
 
 A successful upload or staging response does not prove that the running process loaded the new graph.
 
@@ -86,6 +88,23 @@ If no enabled primary model exists, do not alter global model settings implicitl
 
 Refreshing a reusable template never rewrites an installed Assistant automatically. Record the resulting Assistant identifier and inspect the saved draft.
 
+## Versioned Suite Provisioning
+
+When acceptance requires multiple role Assistants and an Orchestrator, use a versioned suite profile instead of repeating ad hoc UI installation steps. The reusable profile may contain plugin name/version, template keys, stable primary Agent keys, base names/titles, and the Orchestrator role list. It must not contain tenant, organization, workspace, environment, credential, or installed Assistant identifiers.
+
+Use the platform `assistant:suite:init` command when available. The provisioning sequence must:
+
+1. Verify the loaded plugin and every exact template before any Assistant mutation.
+2. Install independent role Assistants first; they may run concurrently after preflight.
+3. Install the Orchestrator as a draft.
+4. Add each role as an External Xpert directly from the Orchestrator primary Agent.
+5. Set every External Xpert connection to `required: true`; optional connections are not loaded by default at runtime.
+6. Save, publish, re-fetch, and verify exactly one required direct connection for each role.
+7. Send `environmentId: null` when no default or explicit environment exists; never synthesize an empty UUID.
+8. Write a secret-free receipt with installed template, Agent, published version, scope, and connection counts.
+
+Default to a fresh unique `run-id` and fail on name collisions. `--resume` may recover only the exact batch after official template provenance and primary Agent identity match. Do not silently overwrite or adopt an unrelated Assistant.
+
 ## Instance-Owned Bindings
 
 Keep tenant, organization, credential, Assistant, conversation, and knowledge-base identifiers out of reusable DSLs unless the artifact is explicitly an instance snapshot.
@@ -116,6 +135,8 @@ Draft update and publication are separate changes.
 
 Do not claim runtime readiness from the draft alone. An existing published Assistant remains on its prior graph until the platform successfully publishes the new version.
 
+Keep plugin package version, template key, DSL `team.version`, suite-profile version, installed published version, and business flow-template version distinct in logs and acceptance reports.
+
 If publication fails, preserve the draft and error details. Do not repeatedly mutate the graph without first identifying which contract failed.
 
 ## Runtime Acceptance
@@ -127,13 +148,14 @@ Test progressively:
 1. Start a fresh conversation or execution context.
 2. Submit one explicit bounded task.
 3. Confirm that the primary Agent delegates to the intended child.
-4. Inspect the child execution inputs and confirm that every correctness-critical identifier, target list, and budget is present under its declared Agent parameter name; do not accept a free-text `input` packet as equivalent.
-5. Confirm that each child invokes only its connected middleware, Skills, tools, and knowledge sources.
-6. Confirm that returned results match the declared task/result contract.
-7. Confirm that expected outputs or artifacts were persisted.
-8. Confirm that muted internal output did not flood the user conversation.
-9. Confirm that no Agent called capabilities outside its role boundary.
-10. Repeat with a small multi-item input, then a representative bounded batch when applicable.
+4. For External Xpert delegation, confirm the target is a direct required connection and that the actual role Assistant—not an obsolete embedded duplicate—executed the task.
+5. Inspect the child execution inputs and confirm that every correctness-critical identifier, target list, and budget is present under its declared Agent parameter name; do not accept a free-text `input` packet as equivalent.
+6. Confirm that each child invokes only its connected middleware, Skills, tools, and knowledge sources.
+7. Confirm that returned results match the declared task/result contract.
+8. Confirm that expected outputs or artifacts were persisted.
+9. Confirm that muted internal output did not flood the user conversation.
+10. Confirm that no Agent called capabilities outside its role boundary.
+11. Repeat with a small multi-item input, then a representative bounded batch when applicable.
 
 Expected generic outline:
 

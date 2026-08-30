@@ -31,7 +31,7 @@ Treat 1,000 lines as an architecture-review threshold for maintained source file
 8. Persist reviewable business data with evidence, confidence, status, and failure state.
 9. Add a Workbench or extension view for human review and operational actions.
 10. When the app publishes previews or share links, read [references/artifact-share-links.md](references/artifact-share-links.md) and use the platform Artifacts and Workspace Files capabilities.
-11. Provide an Assistant template for first-time installation and subsequent in-place upgrades. Before installing or upgrading an Assistant, read [references/assistant-template-lifecycle.md](references/assistant-template-lifecycle.md); update an existing instance through `Assistant Settings` -> `Update from Template` instead of creating a duplicate from the wizard.
+11. Provide an Assistant template for first-time installation and subsequent in-place upgrades. Before installing, upgrading, or provisioning a versioned role/Orchestrator acceptance suite, read [references/assistant-template-lifecycle.md](references/assistant-template-lifecycle.md); update an existing instance through `Assistant Settings` -> `Update from Template` instead of creating a duplicate from the wizard.
 12. Build and register the plugin from an independent plugin repository.
 13. Validate with unit, integration, manifest, and end-to-end tests.
 
@@ -442,7 +442,9 @@ corepack pnpm install
 cd <platform-root>
 corepack pnpm plugin:deploy:local \
   --plugin-dir <plugin-repo-root>/acme/contract-review \
-  --org-id "$XPERT_ORG_ID"
+  --scope tenant \
+  --tenant-id "$XPERT_TENANT_ID" \
+  --manifest-file <temporary-output>/plugin-deployment.json
 ```
 
 Use `plugin:deploy:local` as the default local lifecycle command when the platform exposes it. It detects the package name, builds and tests the plugin, refreshes an existing local `source=code` registration, falls back to first-time installation with `sourceConfig.workspacePath`, and verifies the loaded descriptor. Use `--skip-build` or `--skip-test` only when those exact validations already passed in the same task.
@@ -452,6 +454,20 @@ Deployment invariants:
 - Choose installation scope from `meta.level`: `system` and `tenant` plugins use tenant scope (`system` only in the Default tenant); `organization` plugins use organization scope. Do not infer scope from an available ID or staging path.
 - `staged successfully` or `restartRequired: true` means the plugin was registered or copied, not that it is running. Restart the API, then verify the target plugin registered, bootstrapped, and works at runtime.
 - Plugin deployment and Assistant initialization are separate lifecycles. Deploy the plugin first; then provision a new Assistant or update the existing one from its template, save and publish it, and validate it independently.
+- Run the full build and test tier once per unchanged source. A later deployment in the same task may use `--skip-build --skip-test`; declared `verify:dist` still protects generated assets.
+
+For a plugin that contributes several role Assistants plus an Orchestrator, use a versioned suite profile after the plugin is running:
+
+```bash
+corepack pnpm assistant:suite:init \
+  --profile <assistant-suite.json> \
+  --workspace-id "$XPERT_WORKSPACE_ID" \
+  --org-id "$XPERT_ORG_ID" \
+  --run-id acceptance-01 \
+  --manifest-file <temporary-output>/assistant-suite.json
+```
+
+The initializer must default to new instances, pass `null` when no publish environment exists, and verify direct External Xpert connections with `required: true`. Use `--resume` only for an inspected partial run with matching template provenance.
 
 Prefer username/password login for local deployment. Configure the current OS user's Xpert username and that Xpert account's password as separate macOS Keychain items:
 
@@ -521,4 +537,5 @@ Before finishing, verify:
 - Substantive Workbench UI changes follow the E2E and visual-validation reference: real built assets, semantic UI and host-state assertions, deterministic screenshot evidence when visual behavior matters, and installed-platform validation for platform-dependent integrations.
 - Installed-platform browser validation follows the layered interaction reference when Shadow DOM, iframe, controlled-input, or locator boundaries are present; it preserves host context, avoids sensitive standalone iframe URLs, and verifies every action by observable state.
 - Local deployment uses `plugin:deploy:local`, preserves credentials outside logs and repositories, and verifies the loaded plugin descriptor.
+- Repeated multi-Assistant acceptance uses a versioned suite profile, create-only run IDs, required External Xpert connections, and secret-free deployment/provisioning receipts; it does not overwrite an existing production Assistant.
 - Optional MCP surfaces, when explicitly requested, are validated separately with the dedicated plugin development MCP checklist.

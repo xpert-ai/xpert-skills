@@ -6,6 +6,14 @@ Use the plugin-owned Assistant template for both initial installation and later 
 
 Create an Assistant from the plugin template only when no installed Assistant exists, or when the user explicitly requests a separate parallel instance. The creation flow establishes the Xpert identity, template provenance, graph, middleware, skills, model settings, starter prompts, and required plugin dependencies.
 
+## Versioned Acceptance Suite
+
+When an Agentic App ships several role Assistants plus an Orchestrator, define their reusable topology in a versioned `xpert-assistant-suite@1` profile and use the platform `assistant:suite:init` command when available. Keep scope IDs and installed Assistant IDs out of the profile.
+
+The initializer must preflight the loaded plugin and every template, install role Assistants before the Orchestrator, connect every role directly from the Orchestrator primary Agent as an External Xpert with `required: true`, publish, re-fetch, and verify the graph. Missing environment means `environmentId: null`, never an empty UUID.
+
+Use a unique `run-id` and create-only behavior for normal acceptance. Permit explicit resume only for the exact partial run after template provenance and primary Agent identity match. Store the secret-free installation receipt outside source control and use it together with the plugin deployment manifest as acceptance evidence.
+
 ## Upgrade an Existing Assistant
 
 Do not open the Assistant creation wizard or create a replacement Assistant when an installed Assistant already exists.
@@ -31,6 +39,7 @@ This path is the normal upgrade mechanism for a plugin-managed Assistant. It pre
 - Do not manually redraw the graph to imitate a template upgrade.
 - Do not replace the existing Xpert id or slug during an upgrade.
 - Create a new Assistant only for first installation, an explicitly requested parallel environment, or an intentional breaking migration with an approved identity and data-transition plan.
+- Do not use a versioned acceptance-suite run as an implicit upgrade of an existing production Assistant.
 
 ## Verification Checklist
 
@@ -40,3 +49,5 @@ This path is the normal upgrade mechanism for a plugin-managed Assistant. It pre
 - Required Agent, middleware, tool, and skill connections match the new template.
 - Existing Primary conversations and Project-scoped file spaces still resolve correctly.
 - The Assistant was saved/published and the installed workflow passes a smoke test.
+- External role Assistants, when used, have exactly one direct required connection from the Orchestrator primary Agent.
+- Plugin deployment and Assistant-suite receipts identify the exact versions tested without embedding credentials in reusable source.

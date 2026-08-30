@@ -226,23 +226,27 @@ cd <platform-root>
 corepack pnpm plugin:deploy:local \
   --plugin-dir <plugin-repo-root>/<plugin-relative-path> \
   --scope tenant \
-  --tenant-id "$XPERT_TENANT_ID"
+  --tenant-id "$XPERT_TENANT_ID" \
+  --manifest-file <temporary-output>/plugin-deployment.json
 
 # meta.level is organization
 corepack pnpm plugin:deploy:local \
   --plugin-dir <plugin-repo-root>/<plugin-relative-path> \
   --scope organization \
-  --org-id "$XPERT_ORG_ID"
+  --org-id "$XPERT_ORG_ID" \
+  --manifest-file <temporary-output>/plugin-deployment.json
 ```
 
 The command must:
 
 1. read the plugin name from `package.json`
-2. run the detected build and test scripts unless explicitly skipped, then any declared `verify:dist` before deployment, including with `--skip-build`
-3. call `POST /api/plugin/refresh` for an existing local-code registration
-4. fall back to `POST /api/plugin` with `source=code + sourceConfig.workspacePath` only when the plugin is not refreshable
-5. call `POST /api/plugin/by-names` and fail when no descriptor is returned
-6. redact authentication and avoid logging complete plugin configuration
+2. validate `xpert.plugin.level` against the requested tenant or organization scope before mutation
+3. run the detected build and test scripts unless explicitly skipped, then any declared `verify:dist` before deployment, including with `--skip-build`
+4. call `POST /api/plugin/refresh` for an existing local-code registration
+5. fall back to `POST /api/plugin` with `source=code + sourceConfig.workspacePath` only when the plugin is not refreshable
+6. call `POST /api/plugin/by-names` and fail when no descriptor is returned
+7. redact authentication and avoid logging complete plugin configuration
+8. optionally write a secret-free manifest containing validation status, resolved scope, descriptor summary, and restart requirement
 
 Useful options:
 
@@ -277,6 +281,8 @@ Keep these checkpoints distinct:
 4. **Assistant initialized and published:** a new Assistant was provisioned or an existing one was updated from the template, then saved, published, and tested.
 
 `staged successfully`, descriptor visibility, and `restartRequired: true` do not prove runtime loading. Plugin deployment also does not initialize or publish an Assistant. Verify the plugin runtime first, then perform the Assistant lifecycle separately; update an existing Assistant in place unless the user explicitly requests another instance.
+
+For a deliberately new multi-Assistant acceptance batch, follow [local-release-and-assistant-suite.md](local-release-and-assistant-suite.md). Use a versioned profile and `assistant:suite:init` rather than manually repeating role installation, Orchestrator binding, and publication.
 
 ## Authentication and missing-credentials procedure
 

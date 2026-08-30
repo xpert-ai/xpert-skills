@@ -21,6 +21,8 @@ Required cross-layer assertions for a generated template:
 - every Skill `targetAgentKey` exists and owns the needed middleware;
 - `team.version` matches the expected release contract.
 
+`team.version` versions the reusable Assistant graph contract. It is not the plugin package version, installed Assistant published version, business flow-template version, or a multi-Assistant acceptance-suite version. Record each identity separately. When several templates must be installed together, keep their topology in a versioned suite profile and validate every template key plus primary Agent key before installation.
+
 ## Dependencies
 
 Declare cross-plugin dependencies explicitly. A Skill dependency needs `pluginName`, `componentKey`, and `targetAgentKey`. Required plugin names should agree across contribution dependencies, target-app metadata, and DSL integration options.
@@ -28,3 +30,5 @@ Declare cross-plugin dependencies explicitly. A Skill dependency needs `pluginNa
 ## Installation Reality
 
 Template loading, Assistant installation, draft update, and publication are different operations. A loaded contribution can contain current `startPrompts` while an older installed Assistant still has stale or empty `features.opener`. Verify the new draft and published entity after installing or updating.
+
+For a new multi-Assistant acceptance batch, install role Assistants first, install the Orchestrator as a draft, connect roles as direct External Xperts with `required: true`, publish, and re-fetch the graph. Use `environmentId: null` when no environment exists. Default to a unique create-only run; only an explicit, identity-validated resume may reuse an incomplete batch.
