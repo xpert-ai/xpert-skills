@@ -15,6 +15,7 @@ For `assistant.context.set`, use this closed-command protocol together with [ext
 - [Resolve Local and Host-Composed View Keys](#resolve-local-and-host-composed-view-keys)
 - [`workbench.navigation.open` Targets](#workbenchnavigationopen-targets)
 - [Open Assistant Task Execution Records](#open-assistant-task-execution-records)
+- [Preserve View State While Opening Conversations](#preserve-view-state-while-opening-conversations)
 - [Test the Closed Protocol](#test-the-closed-protocol)
 - [Diagnostic Order](#diagnostic-order)
 
@@ -288,6 +289,16 @@ Add tests that prove:
 - missing `conversationId` leaves the marker non-navigable but still readable;
 - the installed host opens the expected conversation and selects the requested execution;
 - failed navigation does not erase or mutate the execution record.
+
+## Preserve View State While Opening Conversations
+
+Opening an execution record changes the active Assistant conversation while the source fixed View remains selected. From the plugin's perspective, this remains a public navigation-command workflow: send the conversation handles, keep the View's own deep-link state in its declared `XpertViewQuery`, and restore reflected state from `initialQuery`.
+
+Treat URL serialization and Assistant route changes as platform-owned. Plugin code must not construct ChatKit URLs, write the top-level location, encode host query-parameter names, or compensate for missing state with private caches. The observable integration contract is that a valid active View query remains restorable after consecutive conversation changes, refresh, and browser back-forward.
+
+If the first execution-record click works but the second returns the View to its default page, first verify the plugin's command payload, query declaration, and `initialQuery` parser. If those are correct and the installed host stops supplying the previous selection or parameters, classify it as a platform state-preservation defect; do not add a plugin workaround that guesses the lost business state.
+
+Read [view-navigation-state.md](view-navigation-state.md) for the plugin-facing parameter contract, synchronization pattern, acceptance tests, and responsibility boundary.
 
 ## Test the Closed Protocol
 
