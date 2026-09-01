@@ -15,7 +15,7 @@ Load `xpert-agentic-app-developer` and read these skill-relative paths:
 - `references/view-client-commands.md`, especially **Open Assistant Task Execution Records**
 - `references/remote-view-icons.md`
 
-Use `@xpert-ai/plugin-shadcn-ui` for every interactive View primitive. Do not use native `<select>`, `<button>`, `<dialog>`, ad hoc hover panels, emoji icons, or a second component system. Semantic HTML and SVG are appropriate for the lane grid and edge geometry.
+Use the current repository's shadcn source resolved by the companion `shadcn-ui.md` for every interactive View primitive. Use `@xpert-ai/plugin-shadcn-ui` only when locally available; otherwise install the required official components into the current project with the shadcn CLI. Never reference another checkout to obtain the package. Do not use native `<select>`, `<button>`, `<dialog>`, ad hoc hover panels, emoji icons, or a second component system. Semantic HTML and SVG are appropriate for the lane grid and edge geometry.
 
 ## Server Projection
 
@@ -73,7 +73,7 @@ The client may own geometry, zoom, pan, hover, focus, and lane selection. The se
 
 ## Page Header and Case Context
 
-Follow the Agentic App principle of reducing human decision load. Above the canvas, show only:
+Follow the Agentic App principle of reducing human decision load. At normal desktop width, compose the selected Case context as one compact horizontal command row rather than stacked summary cards or a metadata grid. Allow deliberate wrapping only when the host width or localization requires it. Keep these primary fields in that row:
 
 - selected Case identity/title;
 - current state or most important blocker;
@@ -81,7 +81,7 @@ Follow the Agentic App principle of reducing human decision load. Above the canv
 - next authorized action;
 - one visually dominant primary action, plus compact secondary actions such as refresh/filter/zoom.
 
-Move template version, revision, timestamps, detailed scope, and secondary identifiers into a focusable/touch-accessible shadcn `HoverCard`, `Popover`, or detail disclosure. Do not create large empty metadata grids. Never hide a critical blocker, approval requirement, or primary action exclusively in hover content.
+Move device/line or equivalent scope metadata, template version, revision, timestamps, risk counts, detailed scope, and secondary identifiers into a focusable/touch-accessible shadcn `HoverCard`, `Popover`, or detail disclosure anchored to a clearly named context affordance. Do not create a large empty metadata grid or reserve blank cells for absent values. Never hide a critical blocker, approval requirement, or primary action exclusively in hover content.
 
 ## Grid and Edge Rendering
 
@@ -249,7 +249,7 @@ Never generate fake execution dots or animate task completion to make the pipeli
 - Failed, retried, cancelled, interrupted, and superseded attempts remain inspectable.
 - Node card activation follows the declared `dialog`, `view`, or `component` mode.
 - Drag-to-pan works on canvas background without hijacking card/control interaction; edges stay aligned.
-- Header information is intentionally compact and secondary metadata uses progressive disclosure.
+- Header information forms one compact desktop row, wraps only when constrained, and moves secondary metadata into a correctly positioned focusable/touch-accessible disclosure.
 - Router and equivalent logic nodes use the required diamond grammar with labeled outcomes; terminal nodes remain visually distinct.
 - Theme, resize, zoom, pan, keyboard, touch, empty/error/stale, and large-graph behavior are exercised.
-- All interactive primitives come from Xpert shadcn UI; no native select/button/dialog is shipped.
+- All interactive primitives come from the resolved current-repository shadcn source; no cross-repository UI import or native select/button/dialog is shipped.

@@ -5,7 +5,7 @@ Use this reference when an Agentic App adds or changes a Workbench view, remote 
 ## Golden principles
 
 1. Treat E2E tests as executable product acceptance criteria, not merely page-load smoke tests.
-2. Load the real built remote-component JavaScript and CSS. Do not validate only source components or a hand-written test substitute.
+2. Generate the remote-component JavaScript and CSS before the substantive browser suite, then load those exact deployable assets. Make generation part of the test precondition or fail fast on source/generated drift; do not let an old `app.js` test behavior that no longer exists in TSX.
 3. Exercise the workflow as a user would: open the feature, edit or select content, invoke the action, observe feedback, save, reload, and verify the result.
 4. Assert both UI state and authoritative host/domain state. A visible success toast alone is not proof of a successful mutation.
 5. Capture deterministic screenshots for visually significant states and compare them with the supplied reference, design system, and surrounding product UI.
@@ -49,6 +49,16 @@ Use semantic locators based on accessible role, label, title, or stable `data-te
 
 Wait for observable state transitions rather than elapsed time. Examples include a status label, persisted revision, host request, media ready state, completed job, or changed document value. A fixed delay may be used only for a real debounce or animation contract and should be bounded tightly.
 
+For portaled overlays such as `HoverCard`, `Popover`, `Tooltip`, menus, and dialogs, assert more than DOM presence:
+
+- the trigger exposes the expected expanded/open state when the primitive provides one;
+- the content is visible in the correct iframe document;
+- its bounding box is inside that frame's viewport and anchored near the intended trigger;
+- focus, Escape/dismiss, and the required pointer, keyboard, and touch/click paths work;
+- a screenshot is captured with the overlay open when placement is visually significant.
+
+This catches a common false pass in which a Radix `asChild` trigger does not forward its DOM ref and the overlay renders at an offscreen coordinate.
+
 ## Visual QA
 
 When a user supplies screenshots or the change materially affects layout:
@@ -75,6 +85,8 @@ A simulated-host E2E can verify plugin behavior, bridge contracts, persistence i
 
 Run an installed-platform browser pass when any of those capabilities are in scope. Verify the browser Network panel or platform logs when transport behavior matters, and use real user permissions and representative private files without exposing credentials to the remote component.
 
+After a plugin refresh or required API restart, reload or reopen the signed-in top-level Workbench route and wait for the selected View tab, iframe document, bridge initialization, and data-ready state to remount before asserting. A transient empty tab panel is not the installed View, while a standalone iframe URL is not valid host acceptance. Confirm that successful navigation leaves no stale error banner or toast from an earlier failed command.
+
 ## Required completion evidence
 
 For a substantive Workbench change, report the applicable evidence:
@@ -85,4 +97,3 @@ For a substantive Workbench change, report the applicable evidence:
 - screenshot/visual QA result when layout or reference imagery is involved;
 - plugin harness or manifest validation;
 - installed-platform validation, or an explicit statement that installation was not requested and remains unverified.
-

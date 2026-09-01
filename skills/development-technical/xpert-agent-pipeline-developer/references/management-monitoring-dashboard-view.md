@@ -8,7 +8,7 @@ The dashboard supports the pipeline Workbench; it does not replace the `pipeline
 
 - Use Apache ECharts / ECharts.js (`echarts`, preferably tree-shaken modules from `echarts/core`) as the default statistical chart library.
 - Bundle ECharts with the Remote View. Do not load it from a CDN or assume `window.echarts` exists.
-- Use `@xpert-ai/plugin-shadcn-ui` for controls, filters, tables, dialogs, hover disclosures, skeletons, and alerts.
+- Resolve the current-repository shadcn source through the companion `shadcn-ui.md`, then use it for controls, filters, tables, dialogs, hover disclosures, skeletons, and alerts. If `@xpert-ai/plugin-shadcn-ui` is absent locally, install the required official components into this project with the shadcn CLI; never reference another checkout.
 - Consume a tenant-scoped server `dashboardProject` operation that returns metric definitions and chart-ready series.
 - Navigate from an actionable aggregate or row to the selected Case's swimlane through the allowlisted `workbench.navigation.open` command.
 

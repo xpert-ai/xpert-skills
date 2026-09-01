@@ -54,6 +54,8 @@ Once the gates pass:
 7. invoke an observable runtime surface;
 8. provision/publish Assistants only after the plugin is running.
 
+For an installed Workbench runtime check after restart, reload or reopen the signed-in top-level host route and wait for its View tab and iframe initialization to remount. Do not validate through a standalone iframe URL or a detached pre-restart document. This proves only the selected observable plugin surface; broader application acceptance still belongs to the application/pipeline skill.
+
 Do not embed plugin credentials, tenant selection heuristics, or Assistant DSL mutation in the environment setup script. Those belong to the narrower companion skills and may change independently.
 
 ## Secret-Free Receipt

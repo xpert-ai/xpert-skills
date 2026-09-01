@@ -60,6 +60,8 @@ For iframes:
 
 Never open an embedded iframe `src` as a standalone page to make automation easier. The URL may contain short-lived credentials or sensitive bootstrap data, and the standalone document loses host initialization, callbacks, origin assumptions, event subscriptions, and bridge state. If direct preview is required, use the shared Preview Host with sanitized fixtures and the real bridge contract.
 
+After plugin deployment or an API restart, reload the signed-in top-level host URL or reopen the Workbench View, then wait for the selected tab, iframe document, initialization message, and data-ready state to appear again. Treat a briefly empty tab panel during remount as transitional state. Do not inspect a detached pre-restart iframe and do not use its continued DOM presence as evidence that the refreshed plugin is running.
+
 ## Embedded links, citations, and host commands
 
 An embedded link or citation may invoke a host command rather than ordinary navigation. Determine whether it uses a URL, application route, or bridge command, then resolve and activate it inside the owning embedded context.
@@ -115,6 +117,7 @@ Classify failures before choosing the next action:
 | Embedded target opens only through direct navigation | Source interaction or host bridge was bypassed | Retest from the source element and verify the command path |
 | Dialog submits a default instead of visible custom text | Wrong frame, stale input, or controlled state mismatch | Re-resolve the live textbox and inspect the submitted command or payload |
 | Frame works alone but not in the host, or vice versa | Missing bridge/bootstrap context | Validate through the host or shared Preview Host |
+| Updated View is registered but installed UI is empty or old | Host tab/iframe has not remounted, generated assets are stale, or API runtime was not restarted | Verify asset freshness and runtime state, then reload the top-level host and wait for a new initialized frame |
 | A selector worked before navigation and now fails | Node or frame was replaced | Observe again and re-resolve the target |
 | Repeated retries produce inconsistent results | Timing contract or unstable locator | Wait for a concrete state and add a stable accessible/test contract |
 

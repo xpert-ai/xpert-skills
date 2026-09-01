@@ -71,6 +71,8 @@ The state file contains paths, PIDs, endpoints, Compose project, commit, and tim
 
 A saved PID is a hint, not proof. Verify that the process exists, its command/current directory belongs to the selected checkout, and its expected port and endpoint are healthy.
 
+Start source processes with output redirected to the protected environment log files, and inspect only bounded tails or targeted matches during readiness and diagnosis. Startup frameworks may print expanded configuration or environment payloads; never stream or copy an unbounded startup log into chat, a receipt, or CI output. Redact secret-bearing lines, prefer quiet health polling, and report only the failing subsystem, stable error, provenance, and log path needed for follow-up.
+
 ## Docker Smoke Mode
 
 Use full Docker when the goal is a released/self-hosted platform smoke test:

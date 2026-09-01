@@ -230,7 +230,7 @@
       "additionalProperties": false,
       "required": ["componentLibrary", "dashboard", "swimlane"],
       "properties": {
-        "componentLibrary": { "const": "@xpert-ai/plugin-shadcn-ui" },
+        "componentLibrary": { "enum": ["@xpert-ai/plugin-shadcn-ui", "shadcn-cli-local"] },
         "dashboard": {
           "type": "object",
           "additionalProperties": false,

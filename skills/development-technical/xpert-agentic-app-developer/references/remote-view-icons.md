@@ -89,8 +89,8 @@ Keep manifest SVGs self-contained. Do not assume iframe CSS, remote-component va
 
 ## React and shadcn UI Integration
 
-- Use shared shadcn UI components for buttons, menus, tooltips, tabs, badges, alerts, and other controls around icons.
-- Add missing shared shadcn components through the project CLI; do not copy or fork component source into the remote view.
+- Use components from the current repository's selected shadcn source for buttons, menus, tooltips, tabs, badges, alerts, and other controls around icons.
+- Add missing shadcn components through the CLI in the current repository's selected UI owner. If `@xpert-ai/plugin-shadcn-ui` is absent from the current project/workspace, install the component into the current project; never import or copy it from another checkout.
 - Use the repository-standard React icon package for action glyphs. Icons are not a substitute for installing the correct shadcn control.
 - Size icons through shared component conventions or utility classes instead of ad hoc inline dimensions on every call site.
 - Use `currentColor` so icons inherit normal, muted, primary, destructive, warning, success, hover, focus, selected, and disabled states from the control.

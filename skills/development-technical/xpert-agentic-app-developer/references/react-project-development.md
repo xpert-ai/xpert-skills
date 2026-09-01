@@ -56,7 +56,7 @@ For custom remote bundling, add a dedicated remote typecheck config, such as `ts
 
 - `moduleResolution: "Bundler"` when esbuild accepts extensionless source imports.
 - The same JSX factory and fragment settings used by esbuild, such as `jsxFactory: "h"` and `jsxFragmentFactory: "React.Fragment"` for classic JSX output.
-- Workspace source aliases used by the remote bundle, such as `@xpert-ai/plugin-shadcn-ui`.
+- Current-repository workspace source aliases used by the remote bundle, such as `@xpert-ai/plugin-shadcn-ui` when that package exists in the selected workspace. Never add a TypeScript/bundler alias to a sibling checkout; when the package is absent, install shadcn components into the current project as defined by [shadcn-ui.md](shadcn-ui.md).
 - `strictNullChecks: true` so state like `Editor | null` remains visible instead of being displayed as just `Editor`.
 
 Include this config in package `test` / `typecheck`. Place a thin `tsconfig.json` inside the remote component folder that extends the remote config so TS Server uses the same settings in the editor.

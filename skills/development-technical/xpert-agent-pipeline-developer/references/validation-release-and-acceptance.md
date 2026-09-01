@@ -58,19 +58,22 @@ For the default Cases Workbench, test:
 - server-projected lanes/nodes/edges and access trimming;
 - ordered stages, task placement, diamond router/control-node grammar, terminal semantics, labeled selected branches, blockers, summary counts, and executable nodes;
 - actual Assistant Avatars with safe fallback and Assistant-card selection of the whole lane;
+- one compact desktop Case command row containing identity, state/blocker, meaningful progress, next authorized action, and one dominant action; secondary scope/revision metadata is in a focusable and click/touch-accessible disclosure rather than a large grid;
 - at most ten recent real Agent attempts rendered as semantically colored, focusable dots at the Assistant-card and exact task-card bottom-right positions, with all immutable attempts retained and failed/superseded attempts preserved;
 - shadcn HoverCard detail for each execution marker and exact record activation without accidentally toggling lane selection or opening the parent task card;
+- every tested overlay reports the expected open state and has a bounding box inside the iframe viewport; visual acceptance includes the important overlay-open state;
 - execution marker updates from persisted/runtime state rather than timers, fabricated transcripts, or decorative Agent cards;
 - exact ChatKit navigation using the matching conversation/thread/execution handles and the public allowlisted host command;
 - SVG/card alignment after scroll, drag-to-pan, resize, blocked filtering, localization, lane selection, and every supported zoom level;
 - `Process next` behavior with zero, one, and multiple executable nodes;
 - projection reload after a View action, Agent tool, human decision, backend event, retry, cancellation, and external confirmation;
 - action authorization and stale-state rejection;
-- real built Remote Component assets in a View Host;
+- real, freshly generated Remote Component assets in a View Host, with generation or a source/generated freshness gate executed before E2E;
 - host bridge, events, context handoff, files, pagination, i18n, theme, and accessibility as applicable;
 - installed-platform browser paths for platform-dependent behavior;
+- after plugin/API refresh, the signed-in top-level Workbench is reloaded or reopened and the selected View iframe is allowed to remount before assertions; successful navigation leaves no stale `Workbench view ... is not available` feedback;
 - source/generated asset parity.
-- all interactive View primitives come from `@xpert-ai/plugin-shadcn-ui`; scan for and reject native `<select>`, native `<button>`, native `<dialog>`, ad hoc hover panels, emoji icons, or a second component system.
+- all interactive View primitives come from the declared current-repository shadcn source (`@xpert-ai/plugin-shadcn-ui` or `shadcn-cli-local`); scan for and reject cross-repository imports/aliases, native `<select>`, native `<button>`, native `<dialog>`, ad hoc hover panels, emoji icons, or a second component system.
 
 Do not accept a KPI/table-only page without meaningful charts as the management dashboard. Do not accept a management dashboard, single-Case cockpit, linear stepper, detached Agent-card grid, approval page, static diagram, or chat surface as the pipeline overview. Do not accept initials when an actual Assistant Avatar is available, client-side aggregate guesses, hardcoded frontend stages/edges, fake Agent activity/progress timers, reconstructed transcripts, or static fixtures as installed pipeline evidence.
 

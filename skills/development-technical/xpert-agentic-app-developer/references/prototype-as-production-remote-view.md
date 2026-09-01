@@ -9,7 +9,7 @@ This standard is normative for interactive prototypes. A disposable sketch or st
 Build the prototype as the first production implementation of the View:
 
 - one maintained React TypeScript component tree;
-- the real `@xpert-ai/plugin-shadcn-ui` components and stylesheet;
+- the resolved current-repository shadcn components and stylesheet: `@xpert-ai/plugin-shadcn-ui` when locally available, otherwise components installed into this project with the shadcn CLI;
 - Tailwind utilities and shared semantic theme variables;
 - the real Xpert remote-component bridge and message envelopes;
 - one repeatable build that emits the `app.js` and `app.css` used by both preview and production;
@@ -41,7 +41,7 @@ Preview-specific code may exist only in the preview host configuration and adapt
 
 ### Production component primitives from the start
 
-- Import UI primitives from `@xpert-ai/plugin-shadcn-ui`; do not recreate an available primitive with native HTML plus bespoke CSS.
+- Resolve the source with [shadcn-ui.md](shadcn-ui.md), then import UI primitives from that current-repository source. Do not recreate an available primitive with native HTML plus bespoke CSS or reference another checkout to obtain the package.
 - Use the shared `Select` for ordinary selection and the shared searchable combobox pattern for searchable selection.
 - Use official component props, variants, slots, and data attributes before adding consumer overrides.
 - Do not add a custom `className` merely to reproduce the shared component's default appearance.
@@ -53,8 +53,8 @@ Read [shadcn-ui.md](shadcn-ui.md) before implementation. Its import, component o
 
 ### Real theme and runtime contract
 
-- Load `@xpert-ai/plugin-shadcn-ui/style.css` in the real remote entrypoint.
-- Apply host `--xui-*` tokens and install shadcn semantic variables through the shared theme installer.
+- Load the selected package or CLI-local shadcn stylesheet in the real remote entrypoint.
+- Apply host `--xui-*` tokens and install shadcn semantic variables through the current project's selected theme adapter.
 - Propagate color scheme and density through the same bridge path used in production.
 - Exercise portals, focus management, Escape handling, overlays, and keyboard navigation inside the iframe runtime.
 - Do not define a parallel prototype token system or copy host theme variables into a standalone stylesheet.
@@ -127,7 +127,7 @@ Use deterministic fixture scenarios or query parameters to reach each required s
 - Create the production TSX entrypoint, typed gateway, theme bootstrap, and i18n boundary.
 - Add the repeatable asset generation and freshness check.
 
-### 2. Implement with shared components
+### 2. Implement with the selected shadcn components
 
 - Compose the screen from shadcn UI primitives and Tailwind layout utilities.
 - Express business-specific status and hierarchy without restyling shared primitives by default.
@@ -206,7 +206,7 @@ typed contracts -> production TSX + shadcn + Tailwind
 Do not approve the Remote View as ready for production unless all applicable statements are true:
 
 - The prototype and installed View use the same maintained TSX entrypoint and generated assets.
-- Shared shadcn components are used where available; native substitutes and redundant restyling have been removed.
+- Components come from the resolved current-repository shadcn source; cross-repository aliases/imports, native substitutes, and redundant restyling have been removed.
 - Tailwind and semantic host theme variables provide styling without a parallel prototype theme.
 - Business components contain no fixture imports, environment sniffing, or preview-specific branches.
 - Preview and production adapters satisfy the same typed UI contract.

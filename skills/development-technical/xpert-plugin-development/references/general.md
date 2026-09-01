@@ -269,7 +269,7 @@ Select scope from the declared level instead of from whichever identifier happen
 
 When username/password login is used, the command may infer the tenant from the authenticated user response; `--tenant-id <id>` remains available for an explicit override. Do not guess tenant or organization identifiers; discover the non-secret identifier from the local environment or ask the user.
 
-Plugins that generate or copy runtime assets should define a package-specific `verify:dist`, run it at the end of their normal build, and compare source and `dist` assets by content. Name stale paths in failures and avoid concurrent generation or deployment in the same workspace.
+Plugins that generate or copy runtime assets should define a package-specific `verify:dist`, run it at the end of their normal build, and compare source and `dist` assets by content. Generate the deployable Remote View assets before substantive browser E2E, or make E2E fail fast when generation/freshness has not passed. Name stale paths in failures and avoid concurrent generation or deployment in the same workspace. When a consumer depends on a locally changed shared UI package, build and validate that shared package before generating the consumer bundle.
 
 ### Deployment state and Assistant lifecycle
 
@@ -347,6 +347,18 @@ Always try to cover:
 4. provider/schema/tools visibility
 5. one happy path runtime test
 6. one error path runtime test
+
+### Plugin harness dependency resolution
+
+Treat the plugin development harness and the installed host as different module-resolution environments. A plugin may correctly declare a host-provided package as a peer while a standalone harness cannot resolve one of that peer's dependencies.
+
+1. Inspect the plugin package, harness workspace, lockfile, and selected host checkout before changing dependencies.
+2. Prefer normal workspace wiring or the repository's declared harness bootstrap when available.
+3. When the installed host intentionally provides the missing peer/transitive dependency, a bounded local harness run may use the discovered host dependency root, for example through a process-scoped `NODE_PATH`; derive that path from the selected checkout and never write a machine-specific absolute path into package scripts or documentation.
+4. Do not add an incorrect runtime dependency to the plugin solely to make the standalone harness pass, and do not hide a real plugin-owned missing dependency behind host resolution.
+5. Record which dependency source the harness used, then still verify the packaged plugin in the actual host runtime.
+
+The host-peer fallback never applies to `@xpert-ai/plugin-shadcn-ui`. If that UI package is absent from the current plugin repository/workspace, install the required official components into the current project with the shadcn CLI. Do not resolve the UI package through another checkout, `NODE_PATH`, filesystem aliases, or `file:`/`link:` dependencies.
 
 Useful runtime test endpoint:
 

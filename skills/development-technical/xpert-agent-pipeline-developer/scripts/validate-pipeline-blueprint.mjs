@@ -271,8 +271,8 @@ if (pipelineWorkbench.mode === 'required' && executionRecords.mode !== 'case_nod
 let viewExperience = {}
 if (pipelineWorkbench.mode === 'required' || blueprint.viewExperience !== undefined) {
   viewExperience = objectAt(blueprint.viewExperience, 'viewExperience')
-  if (viewExperience.componentLibrary !== '@xpert-ai/plugin-shadcn-ui') {
-    error('viewExperience.componentLibrary', 'must use @xpert-ai/plugin-shadcn-ui for interactive View primitives')
+  if (!['@xpert-ai/plugin-shadcn-ui', 'shadcn-cli-local'].includes(viewExperience.componentLibrary)) {
+    error('viewExperience.componentLibrary', 'must use a current-repository shadcn source: @xpert-ai/plugin-shadcn-ui or shadcn-cli-local')
   }
   const dashboardExperience = objectAt(viewExperience.dashboard, 'viewExperience.dashboard')
   if (dashboardExperience.chartLibrary !== 'echarts') {

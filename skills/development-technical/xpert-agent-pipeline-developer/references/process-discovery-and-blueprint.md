@@ -123,7 +123,7 @@ For the default hybrid product, the blueprint must include:
 - actual platform Assistant Avatars, lane selection, drag-to-pan, and no more than ten recent execution markers at both the Assistant-card and exact task-card bottom-right positions;
 - diamond presentation for routers and equivalent control-flow logic nodes, with labeled outgoing outcomes;
 - immutable execution-attempt presentation with HoverCard details plus exact ChatKit execution navigation;
-- a `viewExperience` contract fixing Xpert shadcn UI, ECharts, Assistant Avatar source, execution-marker placement, pan, and lane-selection invariants;
+- a `viewExperience` contract declaring the current-repository shadcn source (`@xpert-ai/plugin-shadcn-ui` or `shadcn-cli-local`), ECharts, Assistant Avatar source, execution-marker placement, pan, and lane-selection invariants;
 - a `projectionContract` for dashboard aggregation, Case creation/selection, server flow projection, executability, node start, next-node processing, human completion, blocker remediation, workspace resolution, and paged execution-record reads.
 
 A Workbench omission is valid only when `delivery.pipelineWorkbench.mode` is `waived` with the user's reason. Do not silently translate a multi-role process into a dashboard, stepper, or chat-only application.

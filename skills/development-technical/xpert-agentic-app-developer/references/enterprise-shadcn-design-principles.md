@@ -84,7 +84,7 @@ Use a neutral-dominant visual system in which emphasis has a business meaning:
 - Use spacing, alignment, typography, and subtle surface changes before adding borders or containers.
 - Use thin semantic borders only where a boundary improves comprehension or interaction.
 - Use elevation primarily for overlays and floating surfaces, not for every content region.
-- Keep radius and shadow choices consistent with the shared shadcn theme; avoid arbitrary mixtures of sharp, rounded, and pill-shaped containers.
+- Keep radius and shadow choices consistent with the selected shadcn theme; avoid arbitrary mixtures of sharp, rounded, and pill-shaped containers.
 - Use sentence case and a restrained type hierarchy. Prefer left or start alignment for scanning; reserve centered text for compact empty states or focused messages.
 - Use one icon family through the platform icon contract. Do not use emoji, text glyphs, or CSS-drawn approximations as application icons.
 
@@ -109,15 +109,15 @@ Compact is a deliberate mode, not permission to shrink every font, icon, gap, an
 
 Treat shadcn as the shared primitive and composition layer, not as a substitute for information architecture:
 
-- Start from `@xpert-ai/plugin-shadcn-ui` components and their default visual language.
+- Start from the current repository's resolved shadcn source: `@xpert-ai/plugin-shadcn-ui` when already available locally, otherwise official components installed into the current project with the shadcn CLI. Never reference a sibling checkout to obtain the package.
 - Use official props, variants, slots, and `data-*` states before adding consumer overrides.
 - Do not add a custom `className` merely to recreate or fight the shared component default.
 - Limit consumer Tailwind classes to layout, responsive behavior, sizing required by the floorplan, and domain states absent from the shared API.
 - Promote a repeated domain pattern into one plugin-owned composite component instead of repeating long utility-class strings.
-- Request a missing reusable primitive in the shared package; do not fork its source into each Remote View.
+- Add a missing reusable primitive with the shadcn CLI in the selected current-repository owner: the existing local shared package or, when that package is absent, the current project. Do not copy or fork it from another repository.
 - Use the shared `Select` for ordinary selection and the shared searchable combobox pattern when search is required.
 - Use `AlertDialog` only for consequential confirmation and `Dialog` for bounded forms or focused tasks.
-- Preserve the native semantics and accessibility contract of shared components; do not replace a Button, Link, Checkbox, Tab, or Menu with a styled `div`.
+- Preserve the native semantics and accessibility contract of the selected shadcn components; do not replace a Button, Link, Checkbox, Tab, or Menu with a styled `div`.
 
 Raw semantic HTML remains appropriate for content structure when no interactive shared primitive is needed.
 
@@ -269,7 +269,7 @@ Reject or redesign these patterns unless a documented domain constraint justifie
 - Dialogs or drawers that contain an entire multi-step application.
 - Density achieved by shrinking type, targets, and focus indicators rather than removing noise and improving grouping.
 - Responsive behavior implemented only by scaling or clipping a desktop layout.
-- Direct copies of shared shadcn components or broad CSS overrides that recreate their defaults.
+- Direct copies from another project's shadcn components or broad CSS overrides that recreate the selected source's defaults.
 - AI results presented as final truth without evidence, revision, correction, or review state.
 - Empty, error, waiting, or permission states represented by blank space or a toast alone.
 
@@ -281,7 +281,7 @@ Do not approve a new or substantially refactored View unless all applicable stat
 - The page has a stable floorplan and one dominant task per workspace region.
 - Spacing and alignment create hierarchy before borders, cards, color, or elevation.
 - Semantic tokens provide a quiet neutral base and reserve accent and status colors for meaning.
-- Shared shadcn components and official variants are used without redundant restyling.
+- The selected current-repository shadcn components and official variants are used without redundant restyling.
 - Action scope and priority are visible; destructive and bulk actions appear only in the correct context.
 - Tables, lists, cards, inspectors, dialogs, and full workflows match their semantic purpose.
 - Statuses use a shared vocabulary and never rely on color alone; interactive indicators are accessible controls.

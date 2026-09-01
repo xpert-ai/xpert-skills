@@ -117,7 +117,7 @@ Do not create a disposable frontend or a second preview-only business implementa
 - Attach immutable Agent execution attempts to their actual Case/node/lane/role in the projection. Show up to ten semantically colored markers in both the accountable Assistant card and exact owning task card, with HoverCard details and exact ChatKit navigation. Never replace them with decorative dots, synthetic activity, or a locally invented transcript.
 - Render routers and equivalent control-flow logic nodes as compact diamonds with labeled outgoing outcomes; never style them as task cards.
 - Keep each lane-owning business role in its own Assistant. Never model role Assistants as sub-Agents of the Orchestrator; use direct required External Xperts and portable template/primary-Agent expectations.
-- Use ECharts by default for management statistical charts and `@xpert-ai/plugin-shadcn-ui` for View interactions. Do not ship native selects/buttons/dialogs, a CDN chart runtime, or a second component system.
+- Use ECharts by default for management statistical charts. For View interactions, follow `xpert-agentic-app-developer/references/shadcn-ui.md`: use `@xpert-ai/plugin-shadcn-ui` only when it resolves inside the current repository/workspace; otherwise install official components into the current project with the shadcn CLI. Never reference another checkout for the package, and do not ship native selects/buttons/dialogs, a CDN chart runtime, or a second component system.
 - Treat 1,000 lines as an architecture-review threshold for maintained source files.
 
 ### 6. Document Every Completed Feature

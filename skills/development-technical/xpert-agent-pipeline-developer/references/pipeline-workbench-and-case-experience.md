@@ -70,7 +70,7 @@ Keep the shell shallow and operational:
 - host theme, density, locale, and responsive behavior;
 - keyboard and assistive-technology support.
 
-Use interactive primitives from `@xpert-ai/plugin-shadcn-ui`. Do not use native `<select>`, `<button>`, `<dialog>`, ad hoc tooltips, emoji icons, or another component system. Semantic HTML, SVG paths, and ECharts canvas/SVG output remain appropriate for document and visualization structure.
+Use interactive primitives from the current repository's shadcn source resolved by the companion `shadcn-ui.md`: `@xpert-ai/plugin-shadcn-ui` when locally available, otherwise components installed into the current project with the shadcn CLI. Never reference another checkout to obtain the package. Do not use native `<select>`, `<button>`, `<dialog>`, ad hoc tooltips, emoji icons, or another component system. Semantic HTML, SVG paths, and ECharts canvas/SVG output remain appropriate for document and visualization structure.
 
 ## Delivery Sequence
 
@@ -100,6 +100,6 @@ Accept the Workbench only when:
 - dashboard-to-Case, node-to-operation, and execution-to-ChatKit navigation work through allowlisted host commands;
 - failures, blocked states, superseded attempts, and human decisions remain inspectable;
 - Remote View assets load without CDN or undeclared host globals;
-- all interactive controls use Xpert shadcn UI primitives;
+- all interactive controls use the resolved current-repository shadcn primitives;
 - refresh, resizing, responsive layout, theme changes, and permission failures are exercised;
 - the installed plugin, not a source-only preview, passes the relevant end-to-end checks.

@@ -172,6 +172,8 @@ type ClientCommandResult =
 
 Return `unsupported` when the current host intentionally cannot perform the command. Do not silently ignore it or leak router, token, tenant, organization, Assistant, or API internals to the iframe.
 
+Treat navigation feedback as request-scoped state. Clear the previous navigation error before starting a new open attempt, and clear or replace it when the latest attempt succeeds. If requests may overlap, bind the result to an operation id or latest-request token so a late failure cannot overwrite a newer success. A successful destination must not retain a stale `Workbench view ... is not available` banner or toast from an earlier command.
+
 ## Invoke the Command from the Remote View
 
 Use the bridge and the same public key. Do not navigate the top window directly from an isolated iframe.
@@ -336,6 +338,7 @@ Add tests at each boundary.
 - Verify that the destination View opens, not merely that the source click handler ran.
 - Verify that the requested record, tab, document, folder, or conversation is selected.
 - Confirm that the browser console contains no `Client command ... is not available` error.
+- Confirm that a successful retry clears any earlier navigation error and leaves no stale error banner or toast in the source Workbench.
 
 Do not consider unit tests sufficient for this protocol. Manifest resolution, host registration, composed View keys, and real iframe dispatch only meet in the installed host.
 
