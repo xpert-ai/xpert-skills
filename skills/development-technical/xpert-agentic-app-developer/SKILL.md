@@ -1,13 +1,13 @@
 ---
 name: xpert-agentic-app-developer
-description: Develop custom Agentic Apps on the Xpert platform as independent plugins, including extension and Workbench views, remote components, Agent middleware tools, capability and role boundaries, middleware-to-view binding, server modules, data models, Assistant templates, secure local deployment, and production packaging.
+description: Develop custom Agentic Apps on the Xpert platform as independent plugins, including marketplace appConfig presentation and governed initialization, extension and Workbench views, remote components, Agent middleware tools, capability and role boundaries, middleware-to-view binding, server modules, data models, Assistant templates, secure local deployment, and production packaging.
 ---
 
 # Xpert Agentic App Developer
 
 ## Overview
 
-Use this skill to build an Xpert Agentic App as a production plugin, not as a loose prompt or a few attached tools. Treat the app as a closed loop: plugin metadata, server module, Agent middleware tools, persistence, Workbench or extension view UI, Assistant template, installation, and tests.
+Use this skill to build an Xpert Agentic App as a production plugin, not as a loose prompt or a few attached tools. Treat the app as a closed loop: plugin metadata, optional marketplace `appConfig`, server module, Agent middleware tools, persistence, Workbench or extension view UI, Assistant template, governed installation, and tests.
 
 Do not confuse **Agent middleware tools** with workflow **Agent Tool** nodes. In this workflow, "tools" means callable tools returned by Agent middleware to the agent runtime.
 
@@ -25,15 +25,16 @@ Treat 1,000 lines as an architecture-review threshold for maintained source file
 2. Define the business loop: what the Agent automates, what humans review, and what the system persists. When each plugin business project, case, or similar entity needs an isolated file space shared by the Primary Agent and subagents, read [references/assistant-workspace-projects-catalog.md](references/assistant-workspace-projects-catalog.md) and bind it to the Assistant `projects` Workspace Catalog.
 3. Determine whether the plugin provides host server capabilities; if it registers entities, controllers, routes, or equivalent process-global infrastructure, declare it as system level and define its stable artifact namespace before implementing artifact identifiers.
 4. Define domain capability boundaries and map middleware, Views, Agent roles, and human authority according to [references/middleware-view-role-boundaries.md](references/middleware-view-role-boundaries.md).
-5. Register the server module, entities, services, middleware, and view provider.
-6. Expose business actions as Agent middleware tools with strict schemas and call order.
-7. When a deterministic plugin workflow starts specialist subagents through the platform Assistant Task capability, read [references/assistant-task-orchestration.md](references/assistant-task-orchestration.md); when durable background work must keep the current Agent conversation turn alive because proactive completion delivery is unavailable, read [references/agent-long-running-tasks.md](references/agent-long-running-tasks.md) and implement the bounded long-polling bridge.
-8. Persist reviewable business data with evidence, confidence, status, and failure state.
-9. Add a Workbench or extension view for human review and operational actions.
-10. When the app publishes previews or share links, read [references/artifact-share-links.md](references/artifact-share-links.md) and use the platform Artifacts and Workspace Files capabilities.
-11. Provide an Assistant template for first-time installation and subsequent in-place upgrades. Before installing, upgrading, or provisioning a versioned role/Orchestrator acceptance suite, read [references/assistant-template-lifecycle.md](references/assistant-template-lifecycle.md); update an existing instance through `Assistant Settings` -> `Update from Template` instead of creating a duplicate from the wizard.
-12. Build and register the plugin from an independent plugin repository.
-13. Validate with unit, integration, manifest, and end-to-end tests.
+5. When the plugin should appear as a visually presented App in Xpert Explore and support host-governed setup of a dedicated Workspace, optional Knowledge bases, and a published Assistant, read [Plugin Application `appConfig`](references/plugin-application-app-config.md) and declare a typed `appConfig` linked to exactly one same-plugin Assistant template.
+6. Register the server module, entities, services, middleware, and view provider.
+7. Expose business actions as Agent middleware tools with strict schemas and call order.
+8. When a deterministic plugin workflow starts specialist subagents through the platform Assistant Task capability, read [references/assistant-task-orchestration.md](references/assistant-task-orchestration.md); when durable background work must keep the current Agent conversation turn alive because proactive completion delivery is unavailable, read [references/agent-long-running-tasks.md](references/agent-long-running-tasks.md) and implement the bounded long-polling bridge.
+9. Persist reviewable business data with evidence, confidence, status, and failure state.
+10. Add a Workbench or extension view for human review and operational actions.
+11. When the app publishes previews or share links, read [references/artifact-share-links.md](references/artifact-share-links.md) and use the platform Artifacts and Workspace Files capabilities.
+12. Provide an Assistant template for first-time installation and subsequent in-place upgrades. Before installing, upgrading, or provisioning a versioned role/Orchestrator acceptance suite, read [references/assistant-template-lifecycle.md](references/assistant-template-lifecycle.md); update an existing instance through `Assistant Settings` -> `Update from Template` instead of creating a duplicate from the wizard.
+13. Build and register the plugin from an independent plugin repository.
+14. Validate with unit, integration, manifest, and end-to-end tests.
 
 ## Architecture Checklist
 
@@ -44,6 +45,7 @@ An Agentic App should usually include:
 - **Services and data models**: domain entities, review state, source evidence, confidence, audit-friendly outputs.
 - **Workbench or extension view**: view manifest, actions, data queries, host event subscriptions, optional remote component UI.
 - **Assistant template**: DSL content, required plugins, capabilities, model options, starter prompts.
+- **Optional marketplace App contract**: typed `appConfig` presentation, explicit same-plugin Assistant-template linkage, governed Workspace/Knowledge initialization, model preflight, and installation health when the product needs an Explore App and one-click organization setup.
 - **Optional MCP surface**: only when explicitly requested, expose standard MCP tools or MCP Apps through plugin-managed MCP servers; keep detailed MCP implementation guidance outside this skill.
 
 ## Type Boundary Hygiene
@@ -144,7 +146,7 @@ export const CONTROLLER_ROUTE = `${PLUGIN_ARTIFACT_NAMESPACE}/contracts`
 
 ## Plugin Entry Pattern
 
-Define `XpertPlugin` metadata as the app-facing capability contract. For data-xpert integration, prefer `targetApps` and `targetAppMeta` over ad hoc top-level business metadata.
+Define `XpertPlugin` metadata as the app-facing capability contract. Prefer `targetApps` and `targetAppMeta` over ad hoc top-level business metadata. If the plugin is a product-level App that needs host-rendered marketplace presentation and governed first-time initialization, declare `PluginMarketplaceContribution.appConfig` under `targetAppMeta.xpert.marketplace.contents`; read [Plugin Application `appConfig`](references/plugin-application-app-config.md) before implementing it.
 
 ```ts
 const plugin: XpertPlugin<z.infer<typeof ConfigSchema>> = {
@@ -173,7 +175,7 @@ const plugin: XpertPlugin<z.infer<typeof ConfigSchema>> = {
 }
 ```
 
-Use config only for values that administrators or deployments should change: default resource IDs, retrieval modes, external endpoints, feature flags, or credentials handled by the platform config system.
+Use plugin `config` only for values that administrators or deployments should change: default resource IDs, retrieval modes, external endpoints, feature flags, or credentials handled by the platform config system. Do not put marketplace presentation or declarative App resource initialization in plugin `config`, and do not confuse `appConfig` with bundle `apps` / `connectors` resources or Workbench View configuration.
 
 ## Server Module Pattern
 
@@ -422,6 +424,8 @@ Contribute an Assistant template so users do not manually assemble middleware, p
 
 Treat template installation and template upgrade as different lifecycle operations. Read [references/assistant-template-lifecycle.md](references/assistant-template-lifecycle.md) before acting. For an existing digital expert, open its canvas, use `Assistant Settings` -> `Update from Template`, review the graph changes, then save and publish the same Xpert. Do not use the creation wizard or manually redraw the graph as an upgrade mechanism.
 
+When an App declares `appConfig`, its `assistantTemplateKey` must match exactly one raw `templates[].key` from the same loaded plugin. The host uses that link for first-time organization initialization and repair; it does not infer the link from names and does not automatically upgrade an already healthy installed Assistant when plugin metadata changes. Follow [Plugin Application `appConfig`](references/plugin-application-app-config.md) for the declaration and [references/assistant-template-lifecycle.md](references/assistant-template-lifecycle.md) for later in-place upgrades.
+
 Template contribution should include:
 
 - `type: XpertTypeEnum.Agent`
@@ -453,7 +457,7 @@ Deployment invariants:
 
 - Choose installation scope from `meta.level`: `system` and `tenant` plugins use tenant scope (`system` only in the Default tenant); `organization` plugins use organization scope. Do not infer scope from an available ID or staging path.
 - `staged successfully` or `restartRequired: true` means the plugin was registered or copied, not that it is running. Restart the API, then verify the target plugin registered, bootstrapped, and works at runtime.
-- Plugin deployment and Assistant initialization are separate lifecycles. Deploy the plugin first; then provision a new Assistant or update the existing one from its template, save and publish it, and validate it independently.
+- Plugin deployment and Assistant initialization are separate lifecycles. Deploy the plugin first. For an `appConfig` App, use the host-governed Explore setup flow to create the first scoped Workspace, Knowledge bases, and published Assistant; for a plugin without `appConfig`, provision the Assistant through its normal template flow. Upgrade an existing Assistant in place through the template lifecycle rather than treating either setup path as automatic upgrade.
 - Run the full build and test tier once per unchanged source. A later deployment in the same task may use `--skip-build --skip-test`; declared `verify:dist` still protects generated assets.
 
 For a plugin that contributes several role Assistants plus an Orchestrator, use a versioned suite profile after the plugin is running:
@@ -512,6 +516,9 @@ Before finishing, verify:
 - Runtime, package, and bundle namespace metadata agree; emitted build output preserves the declaration.
 - Every entity table name uses `plugin_<artifactNamespace>_<tableKey>`, and all process-global or persisted routes, providers, views, queues, registries, caches, and artifact keys derive from the shared namespace constant unless the platform contract already namespaces them.
 - Plugin metadata declares `targetApps`, `targetAppMeta`, business types, and capabilities.
+- Product-level Apps that require Explore presentation and governed one-click setup declare a typed `targetAppMeta.xpert.marketplace.contents[]` entry with `type: 'app'` and `appConfig`; ordinary tools, Views, connectors, and templates do not add `appConfig` merely for discoverability.
+- Every `appConfig.assistantTemplateKey` matches exactly one same-plugin raw template key, App and managed-resource keys/order are stable, current setup scope uses the supported organization/dedicated/organization-sharing contract, and presentation copy is not mistaken for an authorization or provisioning instruction.
+- Local `appConfig` screenshots are packaged and listed under bundle `assets.screenshots`; initialized App tests cover preflight, scoped one-time creation, published Assistant entry, status/health, idempotent retry, degraded repair without Assistant duplication, and the distinction between initialization and template upgrade.
 - SDK dependency is a peer dependency.
 - Server module registers entities, services, middleware, and view providers.
 - Every domain tool has exactly one owning middleware; middleware tool sets are disjoint unless an explicitly tested shared platform tool is intentional. Views are gated by the owning Feature, and Assistant roles receive only directly connected capabilities.

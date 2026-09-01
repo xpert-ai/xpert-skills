@@ -1,0 +1,678 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xpert.ai/schemas/agent-pipeline-blueprint.schema.json",
+  "title": "Xpert Agent Pipeline Blueprint",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "pipeline",
+    "caseModel",
+    "delivery",
+    "projectionContract",
+    "executionRecords",
+    "features",
+    "roles",
+    "lanes",
+    "stages",
+    "artifacts",
+    "middleware",
+    "views",
+    "routeFacts",
+    "nodes",
+    "edges"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.3"
+    },
+    "pipeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "title", "artifactNamespace", "templateKey", "templateVersion", "startNodeKey"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "title": { "$ref": "#/$defs/title" },
+        "description": { "type": "string" },
+        "artifactNamespace": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "templateKey": { "$ref": "#/$defs/key" },
+        "templateVersion": { "type": "integer", "minimum": 1 },
+        "startNodeKey": { "$ref": "#/$defs/key" }
+      }
+    },
+    "caseModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "keyField",
+        "titleField",
+        "statusField",
+        "revisionField",
+        "templateKeyField",
+        "templateVersionField",
+        "scopeFields",
+        "lifecycleStatuses"
+      ],
+      "properties": {
+        "keyField": { "$ref": "#/$defs/key" },
+        "titleField": { "$ref": "#/$defs/key" },
+        "statusField": { "$ref": "#/$defs/key" },
+        "revisionField": { "$ref": "#/$defs/key" },
+        "templateKeyField": { "$ref": "#/$defs/key" },
+        "templateVersionField": { "$ref": "#/$defs/key" },
+        "scopeFields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/key" }
+        },
+        "lifecycleStatuses": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/key" }
+        }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["surfaces", "assistantTopology", "pipelineWorkbench"],
+      "properties": {
+        "surfaces": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["assistant", "backend", "workbench"]
+          }
+        },
+        "assistantTopology": {
+          "enum": ["standalone_roles", "orchestrated_roles", "both"]
+        },
+        "assistantParticipants": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["roleMode", "orchestratorDelegation", "externalXpertConnections"],
+          "properties": {
+            "roleMode": { "const": "independent_assistants" },
+            "orchestratorDelegation": { "enum": ["none", "external_xperts"] },
+            "externalXpertConnections": { "enum": ["none", "direct_required"] }
+          }
+        },
+        "pipelineWorkbench": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": {
+            "mode": { "enum": ["required", "waived"] },
+            "overviewViewKey": { "$ref": "#/$defs/key" },
+            "dashboardViewKey": { "$ref": "#/$defs/key" },
+            "waiverReason": { "type": "string", "minLength": 1 }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "mode": { "const": "required" } } },
+              "then": { "required": ["overviewViewKey", "dashboardViewKey"] }
+            },
+            {
+              "if": { "properties": { "mode": { "const": "waived" } } },
+              "then": { "required": ["waiverReason"] }
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "surfaces": { "contains": { "const": "assistant" } } },
+            "required": ["surfaces"]
+          },
+          "then": { "required": ["assistantParticipants"] }
+        },
+        {
+          "if": {
+            "properties": { "assistantTopology": { "const": "standalone_roles" } },
+            "required": ["assistantTopology", "assistantParticipants"]
+          },
+          "then": {
+            "properties": {
+              "assistantParticipants": {
+                "properties": {
+                  "orchestratorDelegation": { "const": "none" },
+                  "externalXpertConnections": { "const": "none" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "assistantTopology": { "enum": ["orchestrated_roles", "both"] } },
+            "required": ["assistantTopology"]
+          },
+          "then": {
+            "required": ["assistantParticipants"],
+            "properties": {
+              "surfaces": { "contains": { "const": "assistant" } },
+              "assistantParticipants": {
+                "properties": {
+                  "orchestratorDelegation": { "const": "external_xperts" },
+                  "externalXpertConnections": { "const": "direct_required" }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "projectionContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseList",
+        "caseCreate",
+        "caseGet",
+        "flowProject",
+        "executableNodes",
+        "nodeStart",
+        "nextNodeProcess",
+        "humanTaskComplete",
+        "blockerResolve",
+        "nodeWorkspaceGet",
+        "executionRecordList",
+        "refreshStrategy"
+      ],
+      "properties": {
+        "dashboardProject": { "$ref": "#/$defs/key" },
+        "caseList": { "$ref": "#/$defs/key" },
+        "caseCreate": { "$ref": "#/$defs/key" },
+        "caseGet": { "$ref": "#/$defs/key" },
+        "flowProject": { "$ref": "#/$defs/key" },
+        "executableNodes": { "$ref": "#/$defs/key" },
+        "nodeStart": { "$ref": "#/$defs/key" },
+        "nextNodeProcess": { "$ref": "#/$defs/key" },
+        "humanTaskComplete": { "$ref": "#/$defs/key" },
+        "blockerResolve": { "$ref": "#/$defs/key" },
+        "nodeWorkspaceGet": { "$ref": "#/$defs/key" },
+        "executionRecordList": { "$ref": "#/$defs/key" },
+        "refreshStrategy": { "enum": ["manual", "polling", "event", "hybrid"] }
+      }
+    },
+    "executionRecords": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "retention", "navigationClientCommand", "navigationTarget"],
+      "properties": {
+        "mode": { "enum": ["case_node_lane_bound", "audit_only"] },
+        "retention": { "const": "immutable_attempts" },
+        "navigationClientCommand": { "const": "workbench.navigation.open" },
+        "navigationTarget": { "const": "assistant.conversation" },
+        "visibleLimit": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "presentationTargets": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": { "enum": ["assistant_card", "task_card"] },
+          "allOf": [
+            { "contains": { "const": "assistant_card" } },
+            { "contains": { "const": "task_card" } }
+          ]
+        }
+      }
+    },
+    "viewExperience": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["componentLibrary", "dashboard", "swimlane"],
+      "properties": {
+        "componentLibrary": { "const": "@xpert-ai/plugin-shadcn-ui" },
+        "dashboard": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["chartLibrary", "layout"],
+          "properties": {
+            "chartLibrary": { "const": "echarts" },
+            "layout": { "const": "management_monitoring" }
+          }
+        },
+        "swimlane": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "assistantAvatarSource",
+            "assistantExecutionMarkerPlacement",
+            "nodeExecutionMarkerPlacement",
+            "logicNodeShape",
+            "dragPan",
+            "laneSelection"
+          ],
+          "properties": {
+            "assistantAvatarSource": { "const": "platform_assistant" },
+            "assistantExecutionMarkerPlacement": { "const": "assistant_card_bottom_right" },
+            "nodeExecutionMarkerPlacement": { "const": "task_card_bottom_right" },
+            "logicNodeShape": { "const": "diamond" },
+            "dragPan": { "const": true },
+            "laneSelection": { "const": true }
+          }
+        }
+      }
+    },
+    "features": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/key" }
+    },
+    "roles": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/role" }
+    },
+    "lanes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/lane" }
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/stage" }
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/artifact" }
+    },
+    "middleware": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/middleware" }
+    },
+    "views": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/view" }
+    },
+    "routeFacts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/routeFact" }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/taskNode" },
+          { "$ref": "#/$defs/routerNode" },
+          { "$ref": "#/$defs/terminalNode" }
+        ]
+      }
+    },
+    "edges": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/edge" }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "delivery": {
+            "properties": {
+              "pipelineWorkbench": {
+                "properties": { "mode": { "const": "required" } }
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "delivery": {
+            "properties": {
+              "surfaces": { "contains": { "const": "workbench" } }
+            }
+          },
+          "views": {
+            "contains": {
+              "type": "object",
+              "required": ["kind"],
+              "properties": { "kind": { "const": "pipeline_overview" } }
+            },
+            "minContains": 1,
+            "maxContains": 1
+          },
+          "projectionContract": {
+            "required": ["dashboardProject"]
+          },
+          "nodes": {
+            "items": {
+              "if": {
+                "type": "object",
+                "required": ["kind"],
+                "properties": { "kind": { "const": "task" } }
+              },
+              "then": { "required": ["openMode"] }
+            }
+          },
+          "viewExperience": {},
+          "executionRecords": {
+            "properties": { "mode": { "const": "case_node_lane_bound" } },
+            "required": ["visibleLimit", "presentationTargets"]
+          }
+        },
+        "required": ["viewExperience"],
+        "allOf": [
+          {
+            "properties": {
+              "views": {
+                "contains": {
+                  "type": "object",
+                  "required": ["kind"],
+                  "properties": { "kind": { "const": "operations_dashboard" } }
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "delivery": {
+            "properties": {
+              "surfaces": { "contains": { "const": "assistant" } }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "roles": {
+            "items": {
+              "if": {
+                "properties": { "kind": { "enum": ["business", "orchestrator"] } },
+                "required": ["kind"]
+              },
+              "then": { "required": ["assistantTemplateKey"] }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "title", "kind", "writeAuthority", "middlewareBindings"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "title": { "$ref": "#/$defs/title" },
+        "kind": {
+          "enum": ["business", "orchestrator", "internal_specialist", "human_only"]
+        },
+        "writeAuthority": { "type": "boolean" },
+        "parentRoleKey": { "$ref": "#/$defs/key" },
+        "assistantTemplateKey": { "$ref": "#/$defs/key" },
+        "middlewareBindings": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/key" }
+        }
+      }
+    },
+    "lane": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "title", "accountableRoleKey", "order"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "title": { "$ref": "#/$defs/title" },
+        "accountableRoleKey": { "$ref": "#/$defs/key" },
+        "order": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "title", "order"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "title": { "$ref": "#/$defs/title" },
+        "order": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "title", "ownerRoleKey", "versioned"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "title": { "$ref": "#/$defs/title" },
+        "ownerRoleKey": { "$ref": "#/$defs/key" },
+        "versioned": { "type": "boolean" }
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "mode"],
+      "properties": {
+        "name": { "$ref": "#/$defs/key" },
+        "mode": {
+          "enum": ["read", "write", "decision_support"]
+        }
+      }
+    },
+    "middleware": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "ownerRoleKey", "featureKeys", "tools"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "ownerRoleKey": { "$ref": "#/$defs/key" },
+        "featureKeys": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/key" }
+        },
+        "tools": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/tool" }
+        }
+      }
+    },
+    "view": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "title", "kind", "featureKeys", "actionKeys", "clientCommandKeys"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "title": { "$ref": "#/$defs/title" },
+        "kind": {
+          "enum": ["pipeline_overview", "node_workspace", "case_detail", "operations_dashboard"]
+        },
+        "featureKeys": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/key" }
+        },
+        "actionKeys": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/key" }
+        },
+        "clientCommandKeys": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.-]*$"
+          }
+        }
+      }
+    },
+    "routeFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "sourceArtifactKey", "values"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "sourceArtifactKey": { "$ref": "#/$defs/key" },
+        "values": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/key" }
+        }
+      }
+    },
+    "completion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifactKey", "predicate"],
+      "properties": {
+        "artifactKey": { "$ref": "#/$defs/key" },
+        "predicate": { "type": "string", "minLength": 1 }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "toolNames"],
+      "properties": {
+        "mode": {
+          "enum": ["assistant_task", "human", "system"]
+        },
+        "toolNames": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/key" }
+        }
+      }
+    },
+    "taskNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "title",
+        "kind",
+        "laneKey",
+        "stageKey",
+        "accountableRoleKey",
+        "completion",
+        "execution",
+        "requiredFeatureKeys",
+        "allowedActionKeys",
+        "risk",
+        "humanGate"
+      ],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "title": { "$ref": "#/$defs/title" },
+        "kind": { "const": "task" },
+        "laneKey": { "$ref": "#/$defs/key" },
+        "stageKey": { "$ref": "#/$defs/key" },
+        "openMode": { "enum": ["dialog", "view", "component"] },
+        "workspaceKey": { "$ref": "#/$defs/key" },
+        "componentKey": { "$ref": "#/$defs/key" },
+        "accountableRoleKey": { "$ref": "#/$defs/key" },
+        "completion": { "$ref": "#/$defs/completion" },
+        "execution": { "$ref": "#/$defs/execution" },
+        "requiredFeatureKeys": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/key" }
+        },
+        "allowedActionKeys": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/key" }
+        },
+        "risk": {
+          "enum": ["low", "medium", "high", "irreversible"]
+        },
+        "humanGate": {
+          "enum": ["none", "review", "approval", "external_confirmation"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "openMode": { "const": "view" } },
+            "required": ["openMode"]
+          },
+          "then": { "required": ["workspaceKey"] }
+        },
+        {
+          "if": {
+            "properties": { "openMode": { "const": "component" } },
+            "required": ["openMode"]
+          },
+          "then": { "required": ["componentKey"] }
+        }
+      ]
+    },
+    "routerNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "title", "kind", "stageKey", "routeFactKey"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "title": { "$ref": "#/$defs/title" },
+        "kind": { "const": "router" },
+        "stageKey": { "$ref": "#/$defs/key" },
+        "routeFactKey": { "$ref": "#/$defs/key" }
+      }
+    },
+    "terminalNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "title", "kind", "stageKey"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "title": { "$ref": "#/$defs/title" },
+        "kind": { "const": "terminal" },
+        "stageKey": { "$ref": "#/$defs/key" }
+      }
+    },
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["factKey", "value"],
+      "properties": {
+        "factKey": { "$ref": "#/$defs/key" },
+        "value": { "$ref": "#/$defs/key" }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "$ref": "#/$defs/key" },
+        "to": { "$ref": "#/$defs/key" },
+        "condition": { "$ref": "#/$defs/condition" }
+      }
+    }
+  }
+}

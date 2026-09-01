@@ -1,0 +1,354 @@
+{
+  "schemaVersion": "1.3",
+  "pipeline": {
+    "key": "request-to-quotation",
+    "title": "Request to Quotation",
+    "description": "Neutral example showing a Cases pipeline Workbench, two independent role Assistants, one External-Xpert Orchestrator, a deterministic router, and a human gate.",
+    "artifactNamespace": "request_pipeline",
+    "templateKey": "request_to_quotation",
+    "templateVersion": 1,
+    "startNodeKey": "intake-package"
+  },
+  "caseModel": {
+    "keyField": "case-id",
+    "titleField": "case-title",
+    "statusField": "case-status",
+    "revisionField": "case-revision",
+    "templateKeyField": "flow-template-key",
+    "templateVersionField": "flow-template-version",
+    "scopeFields": ["tenant-id", "organization-id"],
+    "lifecycleStatuses": ["open", "active", "blocked", "completed", "cancelled"]
+  },
+  "delivery": {
+    "surfaces": ["assistant", "backend", "workbench"],
+    "assistantTopology": "both",
+    "assistantParticipants": {
+      "roleMode": "independent_assistants",
+      "orchestratorDelegation": "external_xperts",
+      "externalXpertConnections": "direct_required"
+    },
+    "pipelineWorkbench": {
+      "mode": "required",
+      "overviewViewKey": "request-pipeline-overview",
+      "dashboardViewKey": "request-management-dashboard"
+    }
+  },
+  "projectionContract": {
+    "dashboardProject": "pipeline-dashboard-project",
+    "caseList": "case-list",
+    "caseCreate": "case-create",
+    "caseGet": "case-get",
+    "flowProject": "case-flow-project",
+    "executableNodes": "case-executable-nodes",
+    "nodeStart": "case-node-start",
+    "nextNodeProcess": "case-next-node-process",
+    "humanTaskComplete": "case-human-task-complete",
+    "blockerResolve": "case-blocker-resolve",
+    "nodeWorkspaceGet": "case-node-workspace-get",
+    "executionRecordList": "case-execution-record-list",
+    "refreshStrategy": "hybrid"
+  },
+  "executionRecords": {
+    "mode": "case_node_lane_bound",
+    "retention": "immutable_attempts",
+    "navigationClientCommand": "workbench.navigation.open",
+    "navigationTarget": "assistant.conversation",
+    "visibleLimit": 10,
+    "presentationTargets": ["assistant_card", "task_card"]
+  },
+  "viewExperience": {
+    "componentLibrary": "@xpert-ai/plugin-shadcn-ui",
+    "dashboard": {
+      "chartLibrary": "echarts",
+      "layout": "management_monitoring"
+    },
+    "swimlane": {
+      "assistantAvatarSource": "platform_assistant",
+      "assistantExecutionMarkerPlacement": "assistant_card_bottom_right",
+      "nodeExecutionMarkerPlacement": "task_card_bottom_right",
+      "logicNodeShape": "diamond",
+      "dragPan": true,
+      "laneSelection": true
+    }
+  },
+  "features": [
+    "case-coordination",
+    "pipeline-workbench",
+    "management-dashboard",
+    "request-intake",
+    "evidence-analysis",
+    "quotation-management"
+  ],
+  "roles": [
+    {
+      "key": "lifecycle-coordinator",
+      "title": "Lifecycle Coordinator",
+      "kind": "orchestrator",
+      "writeAuthority": false,
+      "assistantTemplateKey": "request-lifecycle-orchestrator",
+      "middlewareBindings": ["case-coordination"]
+    },
+    {
+      "key": "intake-specialist",
+      "title": "Intake Specialist",
+      "kind": "business",
+      "writeAuthority": true,
+      "assistantTemplateKey": "request-intake-assistant",
+      "middlewareBindings": ["request-intake", "evidence-analysis"]
+    },
+    {
+      "key": "commercial-specialist",
+      "title": "Commercial Specialist",
+      "kind": "business",
+      "writeAuthority": true,
+      "assistantTemplateKey": "quotation-assistant",
+      "middlewareBindings": ["quotation-management"]
+    }
+  ],
+  "lanes": [
+    {
+      "key": "request-intake",
+      "title": "Request Intake",
+      "accountableRoleKey": "intake-specialist",
+      "order": 10
+    },
+    {
+      "key": "commercial",
+      "title": "Commercial",
+      "accountableRoleKey": "commercial-specialist",
+      "order": 20
+    }
+  ],
+  "stages": [
+    { "key": "intake", "title": "Intake", "order": 10 },
+    { "key": "baseline", "title": "Baseline", "order": 20 },
+    { "key": "classification", "title": "Classification", "order": 30 },
+    { "key": "exception-review", "title": "Exception Review", "order": 40 },
+    { "key": "quotation", "title": "Quotation", "order": 50 },
+    { "key": "complete", "title": "Complete", "order": 60 }
+  ],
+  "artifacts": [
+    {
+      "key": "request-package",
+      "title": "Request Package",
+      "ownerRoleKey": "intake-specialist",
+      "versioned": true
+    },
+    {
+      "key": "requirement-baseline",
+      "title": "Requirement Baseline",
+      "ownerRoleKey": "intake-specialist",
+      "versioned": true
+    },
+    {
+      "key": "quotation-draft",
+      "title": "Quotation Draft",
+      "ownerRoleKey": "commercial-specialist",
+      "versioned": true
+    }
+  ],
+  "middleware": [
+    {
+      "key": "case-coordination",
+      "ownerRoleKey": "lifecycle-coordinator",
+      "featureKeys": ["case-coordination"],
+      "tools": [
+        { "name": "case-progress-get", "mode": "read" },
+        { "name": "case-next-task-start", "mode": "decision_support" }
+      ]
+    },
+    {
+      "key": "request-intake",
+      "ownerRoleKey": "intake-specialist",
+      "featureKeys": ["request-intake"],
+      "tools": [
+        { "name": "request-package-register", "mode": "write" },
+        { "name": "requirement-baseline-upsert", "mode": "write" }
+      ]
+    },
+    {
+      "key": "evidence-analysis",
+      "ownerRoleKey": "intake-specialist",
+      "featureKeys": ["evidence-analysis"],
+      "tools": [
+        { "name": "request-evidence-analyze", "mode": "decision_support" }
+      ]
+    },
+    {
+      "key": "quotation-management",
+      "ownerRoleKey": "commercial-specialist",
+      "featureKeys": ["quotation-management"],
+      "tools": [
+        { "name": "quotation-draft-prepare", "mode": "write" }
+      ]
+    }
+  ],
+  "views": [
+    {
+      "key": "request-management-dashboard",
+      "title": "Request Management Dashboard",
+      "kind": "operations_dashboard",
+      "featureKeys": ["management-dashboard", "case-coordination"],
+      "actionKeys": ["dashboard-refresh", "dashboard-filter", "case-open"],
+      "clientCommandKeys": ["workbench.navigation.open"]
+    },
+    {
+      "key": "request-pipeline-overview",
+      "title": "Request Pipeline",
+      "kind": "pipeline_overview",
+      "featureKeys": ["pipeline-workbench", "case-coordination"],
+      "actionKeys": [
+        "case-create",
+        "case-refresh",
+        "case-filter-blocked",
+        "case-zoom",
+        "case-process-next",
+        "node-open",
+        "node-start",
+        "blocker-resolve"
+      ],
+      "clientCommandKeys": ["workbench.navigation.open"]
+    },
+    {
+      "key": "request-workspace",
+      "title": "Request Workspace",
+      "kind": "node_workspace",
+      "featureKeys": ["request-intake", "evidence-analysis"],
+      "actionKeys": ["request-review", "human-task-complete"],
+      "clientCommandKeys": ["workbench.navigation.open"]
+    },
+    {
+      "key": "quotation-workspace",
+      "title": "Quotation Workspace",
+      "kind": "node_workspace",
+      "featureKeys": ["quotation-management"],
+      "actionKeys": ["quotation-review", "human-task-complete"],
+      "clientCommandKeys": ["workbench.navigation.open"]
+    }
+  ],
+  "routeFacts": [
+    {
+      "key": "request-complexity",
+      "sourceArtifactKey": "requirement-baseline",
+      "values": ["standard", "complex"]
+    }
+  ],
+  "nodes": [
+    {
+      "key": "intake-package",
+      "title": "Register Request Package",
+      "kind": "task",
+      "laneKey": "request-intake",
+      "stageKey": "intake",
+      "openMode": "dialog",
+      "accountableRoleKey": "intake-specialist",
+      "completion": {
+        "artifactKey": "request-package",
+        "predicate": "status == accepted"
+      },
+      "execution": {
+        "mode": "assistant_task",
+        "toolNames": ["request-package-register"]
+      },
+      "requiredFeatureKeys": ["request-intake"],
+      "allowedActionKeys": ["node-open", "node-start"],
+      "risk": "low",
+      "humanGate": "none"
+    },
+    {
+      "key": "baseline-requirements",
+      "title": "Baseline Requirements",
+      "kind": "task",
+      "laneKey": "request-intake",
+      "stageKey": "baseline",
+      "openMode": "view",
+      "workspaceKey": "request-workspace",
+      "accountableRoleKey": "intake-specialist",
+      "completion": {
+        "artifactKey": "requirement-baseline",
+        "predicate": "status == baselined"
+      },
+      "execution": {
+        "mode": "assistant_task",
+        "toolNames": ["request-evidence-analyze", "requirement-baseline-upsert"]
+      },
+      "requiredFeatureKeys": ["request-intake", "evidence-analysis"],
+      "allowedActionKeys": ["node-open", "node-start", "request-review"],
+      "risk": "medium",
+      "humanGate": "review"
+    },
+    {
+      "key": "classify-complexity",
+      "title": "Classify Complexity",
+      "kind": "router",
+      "stageKey": "classification",
+      "routeFactKey": "request-complexity"
+    },
+    {
+      "key": "review-complex-request",
+      "title": "Review Complex Request",
+      "kind": "task",
+      "laneKey": "request-intake",
+      "stageKey": "exception-review",
+      "openMode": "view",
+      "workspaceKey": "request-workspace",
+      "accountableRoleKey": "intake-specialist",
+      "completion": {
+        "artifactKey": "requirement-baseline",
+        "predicate": "reviewStatus == approved"
+      },
+      "execution": {
+        "mode": "human",
+        "toolNames": []
+      },
+      "requiredFeatureKeys": [],
+      "allowedActionKeys": ["node-open", "human-task-complete"],
+      "risk": "high",
+      "humanGate": "approval"
+    },
+    {
+      "key": "prepare-quotation",
+      "title": "Prepare Quotation",
+      "kind": "task",
+      "laneKey": "commercial",
+      "stageKey": "quotation",
+      "openMode": "view",
+      "workspaceKey": "quotation-workspace",
+      "accountableRoleKey": "commercial-specialist",
+      "completion": {
+        "artifactKey": "quotation-draft",
+        "predicate": "status == reviewed"
+      },
+      "execution": {
+        "mode": "assistant_task",
+        "toolNames": ["quotation-draft-prepare"]
+      },
+      "requiredFeatureKeys": ["quotation-management"],
+      "allowedActionKeys": ["node-open", "node-start", "quotation-review"],
+      "risk": "high",
+      "humanGate": "review"
+    },
+    {
+      "key": "quotation-ready",
+      "title": "Quotation Ready",
+      "kind": "terminal",
+      "stageKey": "complete"
+    }
+  ],
+  "edges": [
+    { "from": "intake-package", "to": "baseline-requirements" },
+    { "from": "baseline-requirements", "to": "classify-complexity" },
+    {
+      "from": "classify-complexity",
+      "to": "prepare-quotation",
+      "condition": { "factKey": "request-complexity", "value": "standard" }
+    },
+    {
+      "from": "classify-complexity",
+      "to": "review-complex-request",
+      "condition": { "factKey": "request-complexity", "value": "complex" }
+    },
+    { "from": "review-complex-request", "to": "prepare-quotation" },
+    { "from": "prepare-quotation", "to": "quotation-ready" }
+  ]
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Xpert Agent Pipeline Developer"
+  short_description: "Build Xpert dashboards and multi-Agent Case swimlanes"
+  default_prompt: "Use $xpert-agent-pipeline-developer to turn a standardized multi-role process into a validated Xpert Cases pipeline with independent role Assistants, direct required External Xpert orchestration, an ECharts management dashboard, a diamond-router swimlane, actual Assistant Avatars, task- and Assistant-card execution records, backend coordination, explicit human control, and synchronized categorized product functional design docs for every completed feature."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Xpert Local Environment"
+  short_description: "Set up Xpert locally for plugin testing"
+  default_prompt: "Use $xpert-platform-local-environment to provision and verify the selected Xpert checkout as a plugin-test-ready local source environment."

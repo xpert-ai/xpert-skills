@@ -20,6 +20,10 @@ Repository:
 2. Local plugin repository root: discover from the current workspace instead of assuming a fixed absolute path
 3. Local platform backend root: discover from the current workspace instead of assuming a fixed absolute path
 
+## Local Platform Dependency
+
+When the selected Xpert checkout is missing, not started, unhealthy, ambiguously sharing ports, or not proven to be the instance that will load the plugin, load `xpert-platform-local-environment`. Use its `references/setup-and-lifecycle.md`, `references/plugin-test-readiness.md`, and environment scripts to reach `platform_ready` or `plugin_test_ready` before local deployment. Do not duplicate checkout/configuration/startup logic here or treat a healthy port from another checkout as platform evidence.
+
 ## Golden Principle: Review Files Over 1,000 Lines
 
 Treat 1,000 lines as an architecture-review threshold for maintained source files. When a code file exceeds 1,000 lines, pause before adding more behavior and assess whether it combines multiple responsibilities. Split coherent responsibilities into focused files when clear boundaries exist, while preserving explicit ownership, stable public contracts, and test coverage. Do not mechanically fragment a cohesive file merely to satisfy the line count.
@@ -27,7 +31,7 @@ Treat 1,000 lines as an architecture-review threshold for maintained source file
 ## Workflow
 
 1. Identify the plugin type first: general tool plugin, model plugin, integration plugin, middleware plugin, skill-only plugin, plugin-managed MCP server, or MCP App plugin.
-2. Discover the actual local paths for the plugin repository, the target plugin directory, and the platform backend before running commands.
+2. Discover the actual local paths for the plugin repository, the target plugin directory, and the platform backend before running commands. If platform identity, health, or plugin workspace visibility is unproven, use `xpert-platform-local-environment` before continuing.
 3. Read `references/general.md` for repository layout, install flow, test flow, versioning, and PR rules.
 4. When initializing a new plugin, create its default Mintlify documentation package by running `mint new docs` from the plugin root. Keep future project documentation under `docs/`; if that directory already exists, preserve and validate it instead of overwriting it. Follow the initialization and packaging rules in `references/general.md`.
 5. If the task creates, changes, or reviews model-visible/plugin-callable Middleware or MCP tools, read `references/tool-contract-design.md` for strict Zod inputs, DTO outputs, progressive disclosure, pagination, scope, ChatKit title and Tool/Middleware icon contracts, draft revision/conflict handling, and test rules.
