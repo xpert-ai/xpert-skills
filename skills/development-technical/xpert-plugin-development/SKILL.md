@@ -1,111 +1,46 @@
 ---
 name: xpert-plugin-development
-description: Guidance for developing, testing, securely installing or refreshing, versioning, and submitting Xpert plugins. Use for general, model, skill-only, integration, or middleware plugins; decorator-driven business Tool providers; large or revisioned Agent data mutations; local deployment; host-native MCP capabilities; plugin-managed MCP tools and Apps; Workspace Files; Managed Queue; Sandbox Jobs; Runtime Providers; Artifacts; and Collaboration.
+description: Develop, test, package, and securely deploy Xpert plugins, including Agent middleware, host-native MCP Tools/Apps, plugin-managed MCP servers, and platform runtime integrations.
 ---
 
 # Xpert Plugin Development
 
-Use this skill when the task involves plugin work in the Xpert plugin repository:
+Keep this skill to decisions, pitfalls, and lookup pointers. Inspect current SDK types, implementations, tests, and product docs for API details; do not duplicate tutorials or field inventories here.
 
-1. creating a new plugin
-2. updating an existing plugin
-3. installing a local plugin into the platform
-4. validating plugin config, runtime behavior, or packaging
-5. developing decorator-driven business Tools, host-native MCP capabilities, plugin-managed MCP tools, or MCP Apps
-6. preparing commits, version updates, or PRs
+## Working principles
 
-Repository:
+- Discover the plugin, platform, and documentation roots; never hardcode machine paths. Upstream plugins: `https://github.com/xpert-ai/xpert-plugins.git`.
+- Read only the references relevant to the task. Source contracts are authoritative; local SDK/tarball success does not establish npm availability or public lockfile reproducibility.
+- Reuse typed domain services and canonical SDK/contracts imports. Keep authorization, validation, idempotency, and revision checks out of surface-only hooks. Use strict schemas and allowlisted DTOs.
+- Keep metadata, package contents, and runtime registrations aligned. Process-global entities/controllers require `system` or `tenant` level and a stable `artifactNamespace`: `system` installs in the Default tenant, `tenant` in its owning tenant; `organization` is for organization-isolated plugins without global infrastructure.
+- Localize user-facing UI; keep business DTOs language-neutral. Isolate unavoidable compatibility shims and mark them `@deprecated` with the canonical replacement.
+- Treat files over 1,000 lines as a refactoring signal. Investigate oversized TypeScript generics rather than normalizing multi-gigabyte compiler heaps.
+- Preserve existing Mintlify docs; scaffold `docs/` for a new plugin. Keep implementation walkthroughs in product/plugin docs, not in this skill.
 
-1. Official upstream: `https://github.com/xpert-ai/xpert-plugins.git`
-2. Local plugin repository root: discover from the current workspace instead of assuming a fixed absolute path
-3. Local platform backend root: discover from the current workspace instead of assuming a fixed absolute path
+## Deployment and verification
 
-## Local Platform Dependency
+- For local deployment, prove the selected platform is ready; use `xpert-platform-local-environment` if identity or health is uncertain. Prefer `plugin:deploy:local` at the plugin-declared scope.
+- Build generated assets before browser acceptance; check freshness with `verify:dist` and inspect the actual package. Run relevant contract tests and dist-first lifecycle loading.
+- Staged is not running: honor `restartRequired` and verify a live capability. Plugin deployment does not initialize/publish Assistant templates; that is a separate lifecycle.
+- Use configured login/secret-store credentials. Never recover browser credentials, log secrets, or place them in repository files. If credentials are missing, stop before deployment and follow `references/general.md`.
+- Match actions to the request: documentation/review work does not require deployment. Report actual verification and remaining limits; do not imply authorization for publishing or unrelated runtime changes.
 
-When the selected Xpert checkout is missing, not started, unhealthy, ambiguously sharing ports, or not proven to be the instance that will load the plugin, load `xpert-platform-local-environment`. Use its `references/setup-and-lifecycle.md`, `references/plugin-test-readiness.md`, and environment scripts to reach `platform_ready` or `plugin_test_ready` before local deployment. Do not duplicate checkout/configuration/startup logic here or treat a healthy port from another checkout as platform evidence.
+## Read on demand
 
-## Golden Principle: Review Files Over 1,000 Lines
-
-Treat 1,000 lines as an architecture-review threshold for maintained source files. When a code file exceeds 1,000 lines, pause before adding more behavior and assess whether it combines multiple responsibilities. Split coherent responsibilities into focused files when clear boundaries exist, while preserving explicit ownership, stable public contracts, and test coverage. Do not mechanically fragment a cohesive file merely to satisfy the line count.
-
-## Workflow
-
-1. Identify the plugin type first: general tool plugin, model plugin, integration plugin, middleware plugin, skill-only plugin, host-native MCP capability provider, plugin-managed MCP server, or MCP App plugin.
-2. Discover the actual local paths for the plugin repository, the target plugin directory, and the platform backend before running commands. If platform identity, health, or plugin workspace visibility is unproven, use `xpert-platform-local-environment` before continuing.
-3. Read `references/general.md` for repository layout, install flow, test flow, versioning, and PR rules.
-4. When initializing a new plugin, create its default Mintlify documentation package by running `mint new docs` from the plugin root. Keep future project documentation under `docs/`; if that directory already exists, preserve and validate it instead of overwriting it. Follow the initialization and packaging rules in `references/general.md`.
-5. If the task creates, changes, or reviews model-visible/plugin-callable Middleware or MCP tools, read `references/tool-contract-design.md` for strict Zod inputs, DTO outputs, progressive disclosure, pagination, scope, ChatKit title and Tool/Middleware icon contracts, draft revision/conflict handling, and test rules.
-6. If a model iteratively creates or updates many records, read `references/large-data-mutation-workflows.md` for item granularity, idempotency, revision checks, transaction boundaries, lifecycle-call compression, bulk manifest limits, and retry behavior; also read `references/tool-contract-design.md`.
-7. If the task is about model providers, yaml, assets, or packaging, also read `references/model-plugins.md`.
-8. If the task is about callbacks, bindings, notifications, or third-party platform connectivity, also read `references/integration-middleware.md`.
-9. If the task is about plugin background jobs, BullMQ, delayed/retry jobs, Redis queue state, or multi-tenant queue isolation, also read `references/managed-queue.md`.
-10. If a queued Agent workflow must keep the current conversation turn alive until completion because durable proactive delivery is unavailable, read `references/agent-long-running-tasks.md`; also read `references/managed-queue.md` and `references/tool-contract-design.md`.
-11. If the task is about plugin file inputs, workspace files, sandbox `/workspace` paths, file upload/download/send flows, platform file references, or queued file retries, also read `references/workspace-files.md`.
-12. If the task is about isolated browser rendering, Chromium, PDF/PPTX export, document conversion, Sandbox Action Bundles, Browser Runtime, Runtime Definition/Binding/Provider health, Runtime Provider or workspace mapper development, ephemeral Job sandboxes, or the `sandbox-browser` execution pool, read `references/sandbox-jobs.md`; also read `references/managed-queue.md` and `references/workspace-files.md`.
-13. If the task is about creating, versioning, previewing, sharing, revoking, archiving, or deleting platform-managed Artifacts, read `references/artifacts.md`; also read `references/workspace-files.md` when Artifact content is written or deleted.
-14. If the task is about Yjs/CRDT state, collaborative editing, WebSocket sessions, presence, remote cursors, user/Agent co-editing, state-vector synchronization, or plugin business-state materialization, read `references/collaboration.md`.
-15. If the task is about `@XpertToolProvider()`, `@XpertTool()`, Xpert-hosted native MCP publication, runtime-discovered Tool providers, `ToolsetStrategy`, `BuiltinToolset.getMcpCapabilityDefinitions()`, capability-catalog discovery, plugin-resource MCP enable/disable, or MCP Publication lifecycle, read `references/host-native-mcp-capabilities.md`; also read `references/tool-contract-design.md`.
-16. If the task is about `.xpertai-plugin/plugin.json`, plugin-managed stdio MCP servers, MCP tool metadata, `ui://` resources, MCP Apps, or ChatKit inline app rendering, also read `references/mcp-tools-and-apps.md`.
-17. If the task is about Xpert skill-only plugins, Codex-to-Xpert skill conversion, skill marketplace cards, skill resource installation, skill document dialogs, or ClawXpert skill trial flows, also read `references/skill-only-plugins.md`.
-18. Prefer the platform's `plugin:deploy:local` command for local development. It builds, tests, validates declared plugin level against installation scope, refreshes an existing `source=code` plugin or installs it on first use, verifies the loaded descriptor, and can emit a secret-free deployment manifest. Plugins with generated or copied runtime assets must declare `verify:dist`, which also runs with `--skip-build`. Use the manual `source=code + sourceConfig.workspacePath` flow only when that command is unavailable. Treat a staged descriptor as registration evidence only; restart when required and verify runtime loading separately.
-19. Prefer configured Xpert username/password credentials for local deployment. The platform CLI logs in for a fresh JWT, uses it only for the current process, and may infer the tenant from the login response. Treat an explicit `--token` as an intentional override; keep `XPERT_TOKEN` and the legacy token Keychain item only as compatibility fallbacks. Follow the credential setup procedure in `references/general.md`; never extract browser credentials or ask the user to paste a password or token into chat.
-20. When the plugin contributes an Assistant template, deploy and verify the plugin first, then provision a new Assistant or update the existing one from the template as a separate lifecycle. Plugin deployment never proves Assistant initialization or publication.
-21. When acceptance needs multiple role Assistants plus an Orchestrator, read `references/local-release-and-assistant-suite.md`. Use a versioned suite profile and `assistant:suite:init`; require direct External Xpert connections with `required: true`, use `environmentId: null` when no environment exists, default to create-only names, and record a secret-free installation receipt.
-22. Before finishing, verify build output, installation, runtime behavior, and submit only relevant files.
-
-## Plugin Levels and System-Level Artifact Isolation
-
-Choose `meta.level` from the plugin's runtime class and allowed installation scope:
-
-1. Use `system` for a system-level plugin that may be installed only at tenant scope in the Default tenant.
-2. Use `tenant` for a system-level plugin that may be installed at tenant scope in other tenants.
-3. Use `organization` for a non-system-level plugin that may be installed at organization scope.
-
-Treat a plugin that registers or exposes host server capabilities such as TypeORM entities, controllers, server modules, routes, or equivalent process-global infrastructure as system-level. Choose `system` or `tenant` according to its tenant eligibility; never use `organization` for this kind of plugin. Both system-level values require a stable `meta.artifactNamespace`; do not rely on the package-name compatibility fallback.
-
-Use the same `artifactNamespace` as the source of every plugin-owned artifact name. Build database table names, controller route prefixes, provider/view/registry keys, queue identifiers, and other process-global or persisted unique strings through a shared namespace constant and contract-appropriate helper. Do not scatter copied namespace literals or create unnamespaced identifiers that can drift during later refactors. Keep package or bundle metadata aligned with runtime metadata, and test the namespace plus all derived artifact names. See `references/general.md` for the required naming and validation pattern.
-
-## Deployment State and Assistant Lifecycle
-
-- `staged successfully`, descriptor visibility, or `restartRequired: true` means the plugin was registered or copied; it does not prove the module is running. Restart the API when required, then verify bootstrap plus an observable provider, View, route, or tool call.
-- Plugin deployment and Assistant initialization are separate. Deploy and verify the plugin first; then provision or update, save, publish, and test the Assistant independently without creating a duplicate instance unintentionally.
-- For repeated acceptance suites, separate reusable topology from instance bindings: keep role/template/Agent identities in a versioned profile, pass scope and workspace at execution time, and emit deployment/provisioning receipts outside source control.
-
-## Rules
-
-1. Keep package metadata, exported entrypoints, schema, and runtime behavior aligned.
-2. Do not commit secrets, tokens, passwords, temporary callback URLs, or local-only debug values.
-3. Do not expose platform capabilities as tools unless the upstream platform APIs are confirmed to exist and are stable enough for users.
-4. Treat `createTools()` and runtime tool execution as separate contracts and verify both.
-5. When the platform backend code changes, restart the backend before concluding installation or loading is broken.
-6. Do not hardcode machine-specific absolute paths in docs, scripts, or instructions. Use discovered paths or placeholders such as `<plugin-repo-root>` and `<platform-root>`.
-7. For plugin-managed MCP servers, use stable manifest placeholders such as `${PLUGIN_ROOT}` and `${PLUGIN_DATA}` instead of installed runtime paths.
-8. For MCP Apps, keep tool metadata and resource metadata separate: tool `_meta.ui` carries `resourceUri` / `visibility`; resource `_meta.ui` carries display metadata (`title`, `description`, `icon`) plus CSP, permissions, `domain`, and `prefersBorder`.
-9. Treat plugin-managed stdio MCP servers as platform-controlled runtimes: production must be explicitly enabled, commands must be policy-checked, mutable state belongs in `${PLUGIN_DATA}`, and MCP App resource/RPC requests must carry the host-issued `appInstanceToken`.
-10. Style MCP Apps with host-injected CSS variables using the public `--mcp-app-*` contract. Do not hardcode ChatKit internals, private theme tokens, or tenant-specific colors in iframe HTML.
-11. Localize MCP App iframe UI from the host `ui/initialize` language context instead of hardcoding one language in app HTML.
-12. Do not use broad TypeScript escape hatches as normal implementation strategy: avoid `as any`, `as unknown as`, `: any`, `: unknown`, `Record<string, any>`, untyped callbacks, and untyped test mocks. First inspect the SDK, platform, React, MCP, or domain-library types; import concrete types, derive callback/event shapes with `Parameters<>` / `ReturnType<>`, add narrow type guards, or define small boundary DTOs. If a compatibility assertion is unavoidable, isolate it in a named helper at the boundary and keep downstream code typed.
-13. For new plugin background jobs, use the platform Managed Queue abstraction instead of plugin-owned BullMQ queues or Redis connections.
-14. For Sandbox Jobs, declare a deterministic Action Bundle and call only its registered `action + actionVersion` with structured payloads and portable file references. Never pass a profile, renderer version, shell command, Docker option, image name, entrypoint, environment map, or host path in a Job request.
-15. Run heavyweight Sandbox actions from the API-owned `sandbox-browser` Managed Queue pool. Do not block HTTP handlers; keep the pool physically separate and use conservative local concurrency.
-16. Implement Sandbox Runtime Providers only as private or built-in system-level infrastructure. Keep Definition and Job Core provider-neutral, register the Provider in the API Runtime executor, connect to engines lazily, and revalidate Binding health before every execution.
-17. Import Sandbox Jobs, Runtime Provider, workspace mapper, and Managed Queue contracts only from `@xpert-ai/contracts` or `@xpert-ai/plugin-sdk`. If an older host SDK requires compatibility code, isolate one temporary boundary instead of copying parallel interfaces through business code.
-18. Reuse the platform Browser Runtime for Chromium-based work. Do not add plugin-owned Browser Dockerfiles or plugin identifiers to platform Runtime Profiles.
-19. Verify Sandbox Action hashes against an extracted, real `npm pack` tarball. Put Action-owned dependencies in a normal directory such as `runtime-modules`, never nested `node_modules`, which npm strips from packed dependencies.
-20. Implement plugin i18n through explicit locale boundaries. Frontend iframe/MCP App UI must resolve host language into a typed supported locale and render all user-visible static text from a shared dictionary or host i18n mechanism. Backend services should return stable codes and structured DTOs by default, localizing only user-facing artifacts, localized metadata, or explicit display messages with a normalized locale.
-21. Treat an unexpectedly multi-gigabyte `tsc` heap requirement as a type-boundary defect, not a build requirement. When a plugin declares many heterogeneous LangChain `tool()` calls, prevent the Zod v3/v4/JSON Schema overloads from propagating complete schema generics into the SDK tool array; follow the narrow-boundary pattern in `references/general.md` and verify the package with the default Node heap.
-22. Treat forward-compatibility code as a temporary boundary, not a stable public contract. Any exported TypeScript compatibility shim, local interface mirror, adapter, or fallback that exists only until the host SDK exposes the canonical API must carry a JSDoc `@deprecated` tag. The notice must name the canonical replacement and, when known, the removal condition or host/SDK version. Keep the shim isolated, prevent new business code from depending on it, and do not use `Forward-compatible` as the only status marker.
-23. Prefer `@XpertToolProvider()` plus `@XpertTool()` when the same business method should become Agent Middleware and/or host-native MCP. Keep provider, component, Middleware, and Tool keys stable; restore authorization context for every call and never store it on singleton Providers. Use a hand-written `ToolsetStrategy` only for advanced capability kinds or lifecycle behavior the decorator adapter cannot express.
-24. For the host-native MCP product flow, keep one plugin initialization/details entry and render every runtime Provider as an independent MCP card inside the plugin detail dialog. Keep enable/disable, Tool count, endpoint, one-time secret notice, and client-neutral configuration there; do not add a parallel client-branded or “Manage MCP” entry. The resulting Publication belongs under MCP services, not Runtime instances. Only a super administrator may mutate Provider state.
-25. Scope host-native MCP ownership by plugin level. `system` and `tenant` plugins own one tenant Publication per Provider plus independent organization access grants and organization-bound keys; `organization` plugins own one Publication per organization. Enabling in organization A must never admit organization B, even when both organizations eventually share the same tenant-owned endpoint.
-
-## Output expectations
-
-When using this skill, prefer this order:
-
-1. identify plugin type and affected directories
-2. make the minimum safe code changes
-3. build and validate locally
-4. install or refresh through `plugin:deploy:local`
-5. verify runtime behavior
-6. summarize risks, versioning impact, and PR readiness
+| Task | Reference |
+| --- | --- |
+| Scaffolding, metadata, packaging, local deployment, credentials | [general.md](references/general.md) |
+| Tool schemas, DTOs, pagination, revisioned mutations, Agent titles/icons | [tool-contract-design.md](references/tool-contract-design.md) |
+| Decorated Providers, native MCP Tools/Apps, Publication scope and synchronization | [host-native-mcp-capabilities.md](references/host-native-mcp-capabilities.md) |
+| MCP App bridge/theme/security or portable stdio servers | [mcp-tools-and-apps.md](references/mcp-tools-and-apps.md) |
+| Large or iterative data mutations | [large-data-mutation-workflows.md](references/large-data-mutation-workflows.md) |
+| Model providers | [model-plugins.md](references/model-plugins.md) |
+| Integrations, callbacks, notifications | [integration-middleware.md](references/integration-middleware.md) |
+| Managed background jobs | [managed-queue.md](references/managed-queue.md) |
+| Keeping an Agent turn alive during queued work | [agent-long-running-tasks.md](references/agent-long-running-tasks.md) |
+| Workspace files and portable references | [workspace-files.md](references/workspace-files.md) |
+| Sandbox Jobs, Browser Runtime, Runtime Providers | [sandbox-jobs.md](references/sandbox-jobs.md) |
+| Managed Artifacts | [artifacts.md](references/artifacts.md) |
+| Yjs/CRDT collaboration | [collaboration.md](references/collaboration.md) |
+| Skill-only plugins | [skill-only-plugins.md](references/skill-only-plugins.md) |
+| Assistant suite initialization and publication | [local-release-and-assistant-suite.md](references/local-release-and-assistant-suite.md) |

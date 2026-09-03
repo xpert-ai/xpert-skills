@@ -22,7 +22,7 @@ Use these rules whenever creating or reviewing Xpert Agent middleware tools, nor
 
 1. Use Agent middleware tools for Xpert-native, authenticated workflows that need the active tenant, organization, user, Agent, conversation, Workbench, or platform runtime capabilities.
 2. Use host-native MCP capabilities when Xpert should publish an existing governed plugin operation through its managed MCP Publication layer and execute it in the host process with authenticated `ToolExecutionContext`.
-3. Use plugin-managed MCP tools when the MCP service must own its runtime, remain portable across MCP hosts, use stdio-specific dependencies, or serve MCP App resources.
+3. Use plugin-managed MCP tools when the MCP service must own its runtime, remain portable across MCP hosts, or use stdio-specific dependencies. Both host-native Providers and plugin-managed servers can serve MCP App resources; an interactive UI alone does not require stdio.
 4. Use MCP App-only tools for iframe drilldown or UI actions that should not be model-visible.
 5. Do not expose the same internal operation through MCP merely to make it callable by an Xpert Agent. Do not use MCP to bypass native authorization, revision checks, review, or host context.
 6. When multiple surfaces are justified, share a typed domain service or a transport-neutral structured Tool handler. Keep identity restoration, visibility, behavior annotations, transport metadata, and response formatting in thin adapters. Read `host-native-mcp-capabilities.md` for the host-native registration and lifecycle contract.
@@ -283,6 +283,7 @@ Use this pattern for Agent tools that edit drafts, semantic models, configuratio
 3. Keep CSP and permissions on the MCP App resource metadata, not the tool metadata.
 4. Publish Workbench refresh/events only for mutations or job state changes that affect the visible target. Do not refresh the editor after ordinary summary/list/get reads.
 5. Keep tool descriptions honest about side effects, required review, asynchronous completion, and what a successful response proves.
+6. Bind an App to an existing Tool instead of duplicating its business operation as a new `*_app` Tool. For decorated Providers, declare `defineMcpApp()` in class `apps` and set method `mcp.app.resourceKey`; use explicit `['model', 'app']` visibility for shared entry tools. Count the Tool and App separately by `capabilityType`, never by a name suffix. Read `host-native-mcp-capabilities.md` for publishing and verification.
 
 ## Test the contract
 
@@ -305,6 +306,7 @@ Cover at least:
 15. fixed-title tools omit unnecessary `changeSummary`; dynamic summaries drive progress titles but are absent from all emitted ChatKit structured input/output details
 16. middleware `meta.icon` inheritance, explicit `metadata.toolIcon` precedence, supported icon validation, Provider icon serialization for historical events, and generic ChatKit rendering without business tool-name branches
 17. multi-Provider plugins: independent discovery, Tool membership, enable/disable, Publication mapping, and cross-organization admission/key isolation according to plugin level
+18. adding an App to an existing Tool leaves the callable Tool names unchanged; the matching `ui://` resource is published, readable with Resource scopes, and receives the existing Tool's validated DTO through the App bridge
 
 Reject these anti-patterns during review:
 
