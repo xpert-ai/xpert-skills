@@ -1,6 +1,6 @@
 # Middleware And MCP Tool Contract Design
 
-Use these rules whenever creating or reviewing Xpert Agent middleware tools, normal plugin tools, plugin-managed MCP tools, or MCP App tool adapters. Share domain services where appropriate, but design each exposed tool as a small, explicit contract.
+Use these rules whenever creating or reviewing Xpert Agent middleware tools, normal plugin tools, host-native MCP capabilities, plugin-managed MCP tools, or MCP App tool adapters. Share domain services where appropriate, but design each exposed tool as a small, explicit contract.
 
 ## Contents
 
@@ -21,10 +21,13 @@ Use these rules whenever creating or reviewing Xpert Agent middleware tools, nor
 ## Choose the correct tool surface
 
 1. Use Agent middleware tools for Xpert-native, authenticated workflows that need the active tenant, organization, user, Agent, conversation, Workbench, or platform runtime capabilities.
-2. Use plugin-managed MCP tools for portable, externally consumable MCP services installed as Toolsets.
-3. Use MCP App-only tools for iframe drilldown or UI actions that should not be model-visible.
-4. Do not expose the same internal operation through MCP merely to make it callable by an Xpert Agent. Do not use MCP to bypass native authorization, revision checks, review, or host context.
-5. When both surfaces are justified, share a typed domain service and implement separate middleware and MCP adapters. Keep identity restoration, visibility, transport metadata, and response formatting in the adapters.
+2. Use host-native MCP capabilities when Xpert should publish an existing governed plugin operation through its managed MCP Publication layer and execute it in the host process with authenticated `ToolExecutionContext`.
+3. Use plugin-managed MCP tools when the MCP service must own its runtime, remain portable across MCP hosts, use stdio-specific dependencies, or serve MCP App resources.
+4. Use MCP App-only tools for iframe drilldown or UI actions that should not be model-visible.
+5. Do not expose the same internal operation through MCP merely to make it callable by an Xpert Agent. Do not use MCP to bypass native authorization, revision checks, review, or host context.
+6. When multiple surfaces are justified, share a typed domain service or a transport-neutral structured Tool handler. Keep identity restoration, visibility, behavior annotations, transport metadata, and response formatting in thin adapters. Read `host-native-mcp-capabilities.md` for the host-native registration and lifecycle contract.
+7. Prefer `@XpertToolProvider()` and `@XpertTool()` when one business method needs Agent Middleware and host-native MCP exposure. Make MCP opt-in per method, select the Agent Middleware group explicitly, and keep the decorated method transport-neutral. Use hand-written adapters only for a capability type or lifecycle the decorator contract does not cover.
+8. Treat each decorated Provider class as one independently managed MCP service. A plugin may register multiple Provider classes, but their Provider keys, component keys, Tools, Publications, and policies must remain distinct. Middleware groups inside one class are Agent organization only and do not create more MCP services. Let the host derive endpoint slugs; never encode a client brand or depend on the deprecated Provider `slug` hint.
 
 ## Define one bounded intent
 
@@ -57,6 +60,7 @@ Treat the tool schema as an untrusted-boundary contract, not as documentation on
 11. Accept files through the platform's runtime file descriptor or portable file-reference contract. Do not accept base64 blobs, host filesystem paths, publicized internal URLs, or caller-supplied volume scope fields.
 12. Set `verboseParsingErrors: true` on every LangChain structured tool so invalid model arguments return actionable validation details.
 13. Keep MCP `inputSchema` equally strict and bounded. When declaring `outputSchema`, keep it aligned with the actual `structuredContent` DTO.
+14. Decorated host-native MCP Tools require both input and output to be strict Zod object schemas. Invalid provider descriptors or runtime output must fail registration/execution; never silently strip unexpected response fields.
 
 Example:
 
@@ -300,6 +304,7 @@ Cover at least:
 14. localized `metadata.toolName` selection and fallback for Agent middleware tools
 15. fixed-title tools omit unnecessary `changeSummary`; dynamic summaries drive progress titles but are absent from all emitted ChatKit structured input/output details
 16. middleware `meta.icon` inheritance, explicit `metadata.toolIcon` precedence, supported icon validation, Provider icon serialization for historical events, and generic ChatKit rendering without business tool-name branches
+17. multi-Provider plugins: independent discovery, Tool membership, enable/disable, Publication mapping, and cross-organization admission/key isolation according to plugin level
 
 Reject these anti-patterns during review:
 

@@ -2,14 +2,19 @@
 
 Use a plugin-managed MCP server when a plugin should expose standard MCP tools, stay portable across MCP hosts, or return interactive MCP Apps inside ChatKit.
 
+This reference is specifically for plugin-managed MCP runtimes, normally stdio servers. When Xpert should execute plugin capabilities in-process and publish them through its managed MCP Publication layer, use `@XpertToolProvider()` / `@XpertTool()` and read `host-native-mcp-capabilities.md` instead. Do not reuse legacy server-side MCP decorators or create a stdio server solely to expose an existing governed host-side service.
+
+Keep the management surfaces distinct: plugin-managed stdio processes belong under MCP Runtime instances, while a decorated host-native Provider is enabled in the plugin detail dialog and materializes a logical Publication under MCP services. A host-native Provider has no child process to monitor. Do not expose the same business operation through both models unless a documented portability or compatibility contract requires it.
+
 Apply `tool-contract-design.md` to every MCP tool input, output, pagination, authorization, and progressive-disclosure decision. This file adds MCP runtime, metadata, App, and packaging rules.
 
 Keep this path separate from other Xpert extension paths:
 
 1. Use normal tool plugins or Agent middleware for Xpert-native runtime workflows.
-2. Use plugin-managed MCP tools when the callable surface should be standard MCP and installed as an MCP Toolset.
-3. Use MCP Apps when a model-visible MCP tool should return an interactive inline app in ChatKit.
-4. Use remote component or view extension plugins for persistent Workbench or integration pages, not inline tool-call results.
+2. Use host-native MCP capabilities when Xpert owns discovery, execution context, Publication policy, endpoint, and protocol audit.
+3. Use plugin-managed MCP tools when the callable surface should be standard MCP but the plugin must own a portable MCP server runtime.
+4. Use MCP Apps when a model-visible MCP tool should return an interactive inline app in ChatKit.
+5. Use remote component or view extension plugins for persistent Workbench or integration pages, not inline tool-call results.
 
 ## Package Layout
 
