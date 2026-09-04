@@ -30,7 +30,7 @@ Treat 1,000 lines as an architecture-review threshold for maintained source file
 7. Expose business actions as Agent middleware tools with strict schemas and call order.
 8. When a deterministic plugin workflow starts specialist subagents through the platform Assistant Task capability, read [references/assistant-task-orchestration.md](references/assistant-task-orchestration.md); when durable background work must keep the current Agent conversation turn alive because proactive completion delivery is unavailable, read [references/agent-long-running-tasks.md](references/agent-long-running-tasks.md) and implement the bounded long-polling bridge.
 9. Persist reviewable business data with evidence, confidence, status, and failure state.
-10. Add a Workbench or extension view for human review and operational actions.
+10. Add a Workbench or extension view for human review and operational actions. For Assistant Profile tabs and contextual decisions, read [references/assistant-profile-views.md](references/assistant-profile-views.md).
 11. When the app publishes previews or share links, read [references/artifact-share-links.md](references/artifact-share-links.md) and use the platform Artifacts and Workspace Files capabilities.
 12. Provide an Assistant template for first-time installation and subsequent in-place upgrades. Before installing, upgrading, or provisioning a versioned role/Orchestrator acceptance suite, read [references/assistant-template-lifecycle.md](references/assistant-template-lifecycle.md); update an existing instance through `Assistant Settings` -> `Update from Template` instead of creating a duplicate from the wizard.
 13. Build and register the plugin from an independent plugin repository.

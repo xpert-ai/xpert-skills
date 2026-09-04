@@ -44,3 +44,7 @@ Keep this skill to decisions, pitfalls, and lookup pointers. Inspect current SDK
 | Yjs/CRDT collaboration | [collaboration.md](references/collaboration.md) |
 | Skill-only plugins | [skill-only-plugins.md](references/skill-only-plugins.md) |
 | Assistant suite initialization and publication | [local-release-and-assistant-suite.md](references/local-release-and-assistant-suite.md) |
+
+## Assistant Profile integration
+
+For contextual case tabs and governed actions inside an Assistant Profile card, read [Assistant Profile Views](../xpert-agentic-app-developer/references/assistant-profile-views.md). Keep business authorization in the plugin and continuation in durable backend services.

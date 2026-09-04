@@ -172,3 +172,7 @@ Report applicable artifacts rather than claiming the entire lifecycle passed:
 7. Assistant provisioning/publication state;
 8. categorized product functional design documents created or updated for each completed feature;
 9. installed end-to-end acceptance evidence, unexercised layers, and known limitations.
+
+## Assistant Profile integration
+
+For contextual case tabs and governed actions inside an Assistant Profile card, read [Assistant Profile Views](../xpert-agentic-app-developer/references/assistant-profile-views.md). Keep business authorization in the plugin and continuation in durable backend services.
