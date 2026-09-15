@@ -431,3 +431,11 @@ Rules:
 3. config save returns `Method not implemented.`: `_validateCredentials()` is missing
 4. provider visible but runtime empty: `createTools()` and runtime tool initialization are inconsistent
 5. code changed but platform behavior is old: first run `verify:dist` to distinguish stale deployable assets from runtime module loading; only after the final `dist` is current should you investigate API restart or browser caching
+
+## Paired Host And Plugin Releases
+
+When plugin changes consume new host or SDK contracts, identify the first published package version containing them. Update the plugin's peer/development dependencies and lockfile, then validate a build with those published packages. A local SDK alias or copied declaration is paired-source validation only; do not invent a future version or advertise an older SDK as compatible.
+
+For Changesets-managed workspaces, add the appropriate package changeset rather than relying on a manual version bump. Inspect the repository's actual target branch and release workflow. Merging a feature PR, generating a version PR, publishing npm packages and deploying the host are separate events. If merging would leave the target branch unable to build with its declared dependencies, wait for the SDK release and dependency update.
+
+Record runtime prerequisites separately: SDK availability does not deploy a host service or provision a Sandbox image. After installation, refresh capability discovery and review changed publication bindings through the supported management flow. Do not overwrite administrator policy to make discovery pass.
