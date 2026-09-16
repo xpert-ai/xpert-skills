@@ -13,6 +13,7 @@ Platform router implementation is intentionally out of scope. Plugin developers 
 - [Send Complete Plugin State](#send-complete-plugin-state)
 - [Restore State from `initialQuery`](#restore-state-from-initialquery)
 - [Separate Business State from UI-Only State](#separate-business-state-from-ui-only-state)
+- [Navigation and Document Lifecycle](#navigation-and-document-lifecycle)
 - [Open Assistant Execution Records](#open-assistant-execution-records)
 - [Tests](#tests)
 - [Diagnostic Order](#diagnostic-order)
@@ -138,7 +139,7 @@ Classify every plugin parameter by behavior:
 - **Business state** changes provider data: route, selected record, workflow section, filters, pagination, search, or sort.
 - **UI-only state** changes presentation without changing the provider request: collapsed panel, inspector visibility, or a layout preference.
 
-Build a canonical key from every business field and no UI-only fields:
+Build a canonical key from the fields that affect each dataset and no UI-only fields. The following example assumes all four fields change the same provider request; omit fields that only switch already-loaded panels:
 
 ```ts
 function businessStateKey(state: ReviewViewState) {
@@ -156,10 +157,30 @@ On each relevant `init`:
 1. Parse and normalize the complete `initialQuery`.
 2. Apply UI-only fields so refresh and back-forward remain accurate.
 3. Compare the canonical business key with the last applied key.
-4. Reload provider data once when the business key changed.
+4. Reload only the affected dataset when its business key changed; keep unrelated panels mounted.
 5. When only UI state changed, update in place without remounting or refetching.
 
 If a visual mode changes the provider query or returned data shape, classify it as business state. The distinction is behavioral, not based on the field name.
+
+## Navigation and Document Lifecycle
+
+Separate three decisions: which navigation state to apply, which business data to fetch, and whether the iframe document must be replaced. A changed URL, query object reference, or repeated `init` is not by itself a reason to perform all three.
+
+| Observed change | Expected response |
+| --- | --- |
+| Equivalent normalized query, including an echo of local navigation | Apply any changed runtime configuration; keep the document and unchanged datasets. |
+| Presentation-only tab or panel change | Update controlled UI state in place. Fetch tab data only if its dataset is not loaded or is invalidated. |
+| Selected record or dataset filter change | Fetch the affected data and reject stale responses from an earlier selection; preserve unrelated UI. |
+| Execution conversation changes while the business scope and View query stay valid | Open the requested conversation and retain the business View; continue accepting refreshed host context. |
+| Business/security scope changes, entry content changes, or access is denied | Revalidate and invalidate the relevant document, data, and access sessions according to the host contract. |
+
+Use controlled tabs derived from normalized navigation state. A component's `defaultValue` only handles its first mount and cannot implement subsequent URL or back-forward updates. Handle reflected state without publishing another identical navigation command; do not create an init -> navigation -> init loop. Compare dataset keys after normalization rather than raw query objects or serialized URL strings.
+
+Document reuse is a platform responsibility. For an authorized host-side fix, a useful strategy is to revalidate the entry for the new conversation and reuse the mounted document only when the host, View, business/security scope, and entry content remain compatible. Identical HTML alone is not proof of equivalent permissions or data scope. Keep runtime context current and invalidate scope-bound file grants, pending responses, or caches as needed; deny access by clearing the old document rather than leaving stale content visible. Do not reuse documents across project, tenant, or user boundaries merely to remove flicker.
+
+This is a conditional reuse strategy, not a requirement to cache every View or suppress conversation changes. Conversation-scoped datasets must still refresh when their scope changes. Do not add session identity to every plugin dataset key when the data is independent of that conversation, and do not ignore genuine tool-completion invalidations because the navigation key is unchanged.
+
+If both the plugin and host require changes, report and validate both deliverables. A plugin package cannot ship a separate host renderer fix by implication.
 
 ## Open Assistant Execution Records
 
@@ -190,6 +211,9 @@ A characteristic platform-state failure is: the first execution opens correctly 
 5. Refresh and verify the same page restores.
 6. Exercise browser back-forward and a UI-only state such as a tab or panel collapse.
 7. Confirm UI-only changes do not show a full business-data loading cycle.
+8. Compare document identity across the two conversation opens (for example iframe node, `src`, or a test-harness mount counter), not just the final visible tab. A reload followed by state restoration can look correct while still losing local work.
+9. Count requests for the affected View datasets during each action. For an unchanged business scope with no pending invalidation, conversation-only navigation should not trigger list/detail reloads. Separate entry permission checks and legitimate active-task polling from those dataset reloads; do not assert zero network traffic globally.
+10. When changing host document reuse, add isolated host tests for changed entry content, changed security scope, denied access, and overlapping navigation/data responses. For plugin-only changes, retain the installed-host checks without expanding the task into host development.
 
 These are black-box integration checks. They validate the plugin/platform contract without requiring platform source code in the plugin skill.
 
@@ -200,7 +224,7 @@ When a View returns to its default page during Assistant navigation:
 1. Confirm the source manifest enables selection and parameters and allowlists the navigation command.
 2. Inspect the plugin's outgoing bridge payload; verify the expected public command key and handles or complete View query.
 3. Log normalized `initialQuery` values received before and after the first and second actions.
-4. Confirm the parser handles repeated `init` messages and does not reset valid state through defaults or stale closures.
+4. Confirm the parser handles repeated `init` messages and does not reset valid state through defaults or stale closures. If the query stays correct but the page flashes or local state disappears, distinguish a host document replacement from plugin-driven data loading using document identity and dataset request counts.
 5. Use the browser URL only as black-box evidence to locate when state disappeared; do not encode its private field names in plugin code.
 6. Reload the final URL to separate deep-link recovery from iframe memory.
 7. If the plugin payload and parser are correct but the host no longer supplies the previous selection or parameters, file or fix a platform state-preservation defect.

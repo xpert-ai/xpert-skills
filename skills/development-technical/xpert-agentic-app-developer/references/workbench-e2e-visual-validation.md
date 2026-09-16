@@ -59,6 +59,8 @@ For portaled overlays such as `HoverCard`, `Popover`, `Tooltip`, menus, and dial
 
 This catches a common false pass in which a Radix `asChild` trigger does not forward its DOM ref and the overlay renders at an offscreen coordinate.
 
+For URL/tab synchronization or execution-conversation navigation, also follow [view-navigation-state.md](view-navigation-state.md#tests). Assert document identity and affected dataset request counts across consecutive conversation opens, in addition to selection/tab recovery after refresh and back-forward. A page that remounts and restores the same tab can pass a screenshot check while still discarding local state. Keep scope changes and access-denial cases in isolated host tests.
+
 ## Visual QA
 
 When a user supplies screenshots or the change materially affects layout:
