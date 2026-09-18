@@ -44,6 +44,7 @@ Keep this skill to decisions, pitfalls, and lookup pointers. Inspect current SDK
 | Yjs/CRDT collaboration | [collaboration.md](references/collaboration.md) |
 | Skill-only plugins | [skill-only-plugins.md](references/skill-only-plugins.md) |
 | Assistant suite initialization and publication | [local-release-and-assistant-suite.md](references/local-release-and-assistant-suite.md) |
+| Building Assistant template DSLs and default middleware composition | [Primary Agent Middleware Defaults](../xpert-assistant-dsl-builder/references/primary-agent-middleware-defaults.md), using `xpert-assistant-dsl-builder` |
 
 ## Assistant Profile integration
 

@@ -2,14 +2,14 @@ team:
   name: example-minimal-assistant
   type: agent
   title: Minimal Assistant
-  description: Smallest reusable Agent Assistant example.
+  description: Minimal reusable Assistant with primary-Agent middleware defaults.
   features:
     opener:
       enabled: true
       message: ''
       questions:
         - Explain what you can do.
-  version: '1'
+  version: '2'
   agent:
     key: Agent_Coordinator
   copilotModel:
@@ -33,10 +33,46 @@ nodes:
       promptTemplates: null
       parameters: null
       outputVariables: null
-      options: null
+      options:
+        middlewares:
+          order: [Middleware_ContextCompression, Middleware_Todo]
       copilotModel: null
       leaderKey: null
       collaboratorNames: []
       toolsetIds: []
       knowledgebaseIds: []
-connections: []
+  - type: workflow
+    key: Middleware_ContextCompression
+    position: { x: 120, y: 260 }
+    entity:
+      type: middleware
+      key: Middleware_ContextCompression
+      title: Context compression
+      provider: ContextCompressionMiddleware
+      required: true
+      options:
+        threshold: 0.7
+        preserveFraction: 0.3
+        enableTwoPhaseCompression: true
+        protectedUserTurns: 2
+  - type: workflow
+    key: Middleware_Todo
+    position: { x: 520, y: 260 }
+    entity:
+      type: middleware
+      key: Middleware_Todo
+      title: Task progress
+      provider: todoListMiddleware
+      required: true
+      options: {}
+connections:
+  - type: workflow
+    key: Agent_Coordinator/Middleware_ContextCompression
+    from: Agent_Coordinator
+    to: Middleware_ContextCompression
+    required: true
+  - type: workflow
+    key: Agent_Coordinator/Middleware_Todo
+    from: Agent_Coordinator
+    to: Middleware_Todo
+    required: true

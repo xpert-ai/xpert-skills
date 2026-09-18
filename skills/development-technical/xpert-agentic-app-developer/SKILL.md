@@ -422,6 +422,8 @@ Add tests for the whole event contract:
 
 Contribute an Assistant template so users do not manually assemble middleware, prompts, model settings, state variables, and starter prompts.
 
+For template DSL construction, use `xpert-assistant-dsl-builder` and its [Primary Agent Middleware Defaults](../xpert-assistant-dsl-builder/references/primary-agent-middleware-defaults.md). Every independent Assistant's primary Agent gets todo management and one context-management strategy by default; compose this shared baseline with each role's own domain middleware. Preserve explicit compatible settings, apply conditional capabilities only when needed, and keep defaults in one generator rather than separate role-specific copies.
+
 Treat template installation and template upgrade as different lifecycle operations. Read [references/assistant-template-lifecycle.md](references/assistant-template-lifecycle.md) before acting. For an existing digital expert, open its canvas, use `Assistant Settings` -> `Update from Template`, review the graph changes, then save and publish the same Xpert. Do not use the creation wizard or manually redraw the graph as an upgrade mechanism.
 
 When an App declares `appConfig`, its `assistantTemplateKey` must match exactly one raw `templates[].key` from the same loaded plugin. The host uses that link for first-time organization initialization and repair; it does not infer the link from names and does not automatically upgrade an already healthy installed Assistant when plugin metadata changes. Follow [Plugin Application `appConfig`](references/plugin-application-app-config.md) for the declaration and [references/assistant-template-lifecycle.md](references/assistant-template-lifecycle.md) for later in-place upgrades.

@@ -46,6 +46,8 @@ Use parameters for authoritative IDs, revisions, operation IDs, bounded lists, a
 
 The deprecated `vision` property should not be introduced in new templates.
 
+For a primary Agent, apply [primary-agent-middleware-defaults.md](primary-agent-middleware-defaults.md). `middlewares.order` contains connected middleware node keys. Required baseline loading is controlled by the middleware node's `entity.required`, not just the connection's `required` flag.
+
 ## Other Node Types
 
 The current graph node types are `agent`, `knowledge`, `toolset`, `xpert`, and `workflow`. The node's `entity` shape comes from its provider contract. A middleware is normally a `workflow` node whose entity declares `type: middleware`, a stable key, provider, options, and optional tool enablement map.

@@ -32,7 +32,8 @@ team:
   memory:
     enabled: false
   summarize:
-    enabled: true
+    # ContextCompressionMiddleware owns primary-Agent history management.
+    enabled: false
     maxMessages: 40
     retainMessages: 12
   features:
@@ -57,7 +58,7 @@ team:
     title:
       enabled: true
       instruction: Generate a short task title.
-  version: '1'
+  version: '2'
   agent:
     key: Agent_Coordinator
   copilotModel:
@@ -88,11 +89,37 @@ nodes:
       outputVariables: null
       options:
         parallelToolCalls: false
+        middlewares:
+          order: [Middleware_ContextCompression, Middleware_Todo]
       copilotModel: null
       leaderKey: null
       collaboratorNames: []
       toolsetIds: []
       knowledgebaseIds: []
+  - type: workflow
+    key: Middleware_ContextCompression
+    position: { x: 40, y: 260 }
+    entity:
+      type: middleware
+      key: Middleware_ContextCompression
+      title: Context compression
+      provider: ContextCompressionMiddleware
+      required: true
+      options:
+        threshold: 0.7
+        preserveFraction: 0.3
+        enableTwoPhaseCompression: true
+        protectedUserTurns: 2
+  - type: workflow
+    key: Middleware_Todo
+    position: { x: 360, y: 260 }
+    entity:
+      type: middleware
+      key: Middleware_Todo
+      title: Task progress
+      provider: todoListMiddleware
+      required: true
+      options: {}
   - type: agent
     key: Agent_Analyst
     position: { x: 720, y: 220 }
@@ -152,6 +179,16 @@ nodes:
         query_metrics: true
         mutate_case: false
 connections:
+  - type: workflow
+    key: Agent_Coordinator/Middleware_ContextCompression
+    from: Agent_Coordinator
+    to: Middleware_ContextCompression
+    required: true
+  - type: workflow
+    key: Agent_Coordinator/Middleware_Todo
+    from: Agent_Coordinator
+    to: Middleware_Todo
+    required: true
   - type: agent
     key: Agent_Coordinator/Agent_Analyst
     from: Agent_Coordinator

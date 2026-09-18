@@ -17,12 +17,13 @@ Build Assistant DSLs from the current Xpert platform contract, not from memory o
 |---|---|
 | Team identity, model, memory, runtime, canvas | [team-properties.md](references/team-properties.md) |
 | Agent prompt, parameters, tools, attachment, delegation | [agent-properties.md](references/agent-properties.md) |
+| Creating or changing a primary Agent or template middleware composition | [primary-agent-middleware-defaults.md](references/primary-agent-middleware-defaults.md) |
 | Studio 功能, opener questions, suggestion, speech, upload | [features-and-ui-mapping.md](references/features-and-ui-mapping.md) |
 | Plugin template metadata and cross-layer generation | [template-contribution.md](references/template-contribution.md) |
 | Child Agent isolation and task/result contracts | [subagent-context-isolation.md](references/subagent-context-isolation.md) |
 | Import, multi-Assistant suite provisioning, publish, and runtime verification | [lifecycle-validation.md](references/lifecycle-validation.md) |
 
-Use [examples/minimal-agent.yaml](examples/minimal-agent.yaml) for the smallest graph and [examples/full-featured-assistant.yaml](examples/full-featured-assistant.yaml) for property placement. Examples demonstrate shape; current host contracts remain authoritative.
+Use [examples/minimal-agent.yaml](examples/minimal-agent.yaml) for a minimal graph with primary-Agent defaults and [examples/full-featured-assistant.yaml](examples/full-featured-assistant.yaml) for property placement. Examples demonstrate shape; current host contracts remain authoritative.
 
 ## Contract Authority
 
@@ -84,6 +85,12 @@ For each child Agent:
 
 Child Agents do not inherit a parent or sibling's connections. `disableMessageHistory` controls that Agent's own cross-round history; it is not a parent-context switch. Use `team.agentConfig.mute` only to hide internal streamed narration, not to suppress its result.
 
+## Primary Agent Middleware Defaults
+
+When building an Assistant DSL, give its `team.agent.key` Agent a directly connected `todoListMiddleware` and one context-management middleware, defaulting to `ContextCompressionMiddleware`. Apply this to every independent Assistant, including an Orchestrator and each role Assistant. Internal children receive only what their own task needs; they do not inherit these connections.
+
+Read [primary-agent-middleware-defaults.md](references/primary-agent-middleware-defaults.md) for verified provider names, options, required-node semantics, conditional capabilities, and validation. Merge by provider without duplicating existing nodes, preserve a working explicit context-management choice, and record a concrete compatibility or user-directed exception rather than silently omitting a default. Updating unrelated fields of an installed Assistant does not authorize changing its middleware or publishing it.
+
 ## Validate Before Delivery
 
 Run:
@@ -97,6 +104,8 @@ node <skill-dir>/scripts/validate-assistant-dsl.mjs \
 ```
 
 The validator checks public field names, identity, opener alignment, graph endpoints, Agent hierarchy, parameters, capability ownership, reusable-resource safety, contribution Skill targets, and source/build parity. Add repository tests for generated DSL because a TypeScript contribution cannot always be reconstructed safely by static text parsing.
+
+Also review the primary-Agent defaults and runtime behavior using the reference checklist. The generic validator does not verify provider registration, provider-specific options, required-node behavior, or the default policy.
 
 Then run focused tests, type checks, build, and `git diff --check`. Increment `team.version` for graph, prompt contract, features, memory, model, dependency, or runtime option changes.
 
