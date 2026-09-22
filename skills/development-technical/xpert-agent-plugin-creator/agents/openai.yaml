@@ -1,0 +1,4 @@
+interface:
+  display_name: "Xpert Agent Plugin Creator"
+  short_description: "Build portable Xpert Agent Plugins and workspace Connectors"
+  default_prompt: "Use $xpert-agent-plugin-creator to build an Xpert Agent Plugin with the appropriate workspace Connector and validate its package."
