@@ -1,0 +1,42 @@
+# Agent, Prompt, and Tool-Owned State
+
+Read this when implementing Agent-led orchestration, repeated External Assistant delegation, task recovery, or middleware hooks that inspect business status. Confirm the orchestration mode with the existing requirements: a deterministic backend pipeline and an Agent-led workflow are different contracts. Do not silently turn the latter into a hidden state machine.
+
+## Ownership
+
+| Layer | Responsibility |
+| --- | --- |
+| Agent + Prompt/workflow | Interpret the goal and receipts; choose tools, delegate bounded tasks, decide whether to repair, retry, report a blocker, or finish. |
+| Business tools + domain services | Validate identity, authorization, task/execution ownership, versions and inputs; persist explicit transitions; validate and accept artifacts; return actionable receipts. |
+| Middleware hooks | Fixed role capability selection and generic runtime/protocol adaptation. No business progression or per-task completion policy. |
+| Views | Project persisted business status and execution history. Do not infer acceptance from an Agent turn ending. |
+
+Do not put business routing, automatic claiming/submission, retry counters, budget extensions, or task-ending instructions in `wrapModelCall`, `wrapToolCall`, `beforeModel`, or `beforeAgent`. Moving the same state machine between hooks is not a fix. For Agent-led workflows, let the LLM decide retries from specific errors unless an explicit product requirement imposes a limit; transport timeouts and platform resource ceilings remain separate concerns.
+
+## Reused graphs are not invocation-local storage
+
+A middleware instance or compiled external graph can serve multiple sequential or interleaved invocations. Mutable closure variables such as `currentTask`, `terminal`, `contextReady`, output-path sets, or a task instruction can leak between them. A previous submission may then leave the next task with an empty tool list and an unrelated completion receipt.
+
+`disableMessageHistory` does not reset middleware closures. Resetting a shared variable in `beforeAgent` still races with concurrent invocations. Do not use a process-local map as the only truth for state that must survive checkpoint recovery or worker restart.
+
+Pass the delegated business task ID as an explicit tool argument. Resolve execution identity from trusted runtime configuration, not a model argument. Reload and validate durable state at the business-tool boundary. Store necessary server-issued workspace/source access descriptors against the task and execution, or derive them from authoritative immutable inputs. Fence persistence against stale executions and retain immutable accepted versions.
+
+## Explicit tools and receipts
+
+Use a small, stable contract such as `get_task_context`, scoped file/source operations, and `submit_task`:
+
+1. The context/claim tool returns the current objective, phase workflow, fixed input references, exact output paths and prior diagnostics; claiming is explicit and idempotent for the owning execution.
+2. Resource tools validate the current assignment before access. When generic tools lack a domain scope, wrap their implementations in explicit domain tools with strict schemas and task parameters. Prevent direct generic-tool bypass; do not broaden workspace access merely to remove a hook.
+3. Writing persists a draft. Submission explicitly validates, archives and accepts it. Return a receipt with task ID, status, accepted flag, artifact references and concrete diagnostics. A failed validation may keep the task editable; the Agent chooses its next action.
+4. The worker reports the receipt to the delegator. The main Agent decides the next delegation. A completed runtime invocation or a plain-text tool expression is not proof of a tool call or accepted business result.
+
+Keep tool schemas, Prompt workflows, skill examples and published role templates consistent. If domain tool names differ from generic examples, declare the mapping and argument shape explicitly. Preserve platform execution/tool-call identifiers and file activity events when adapting existing tool implementations.
+
+## Regression and release evidence
+
+- Reuse one middleware/graph for task A then task B after successful, failed and recoverable A receipts. B must receive its own context and usable tools.
+- Interleave executions; reject another task's writable path and an obsolete execution without affecting the valid task.
+- Reconstruct the middleware and resume from persisted state; verify repeat submission is idempotent.
+- Verify source allowlists, read-only inputs and immutable accepted outputs at the actual tool/service entry point.
+- Confirm business tools return specific failures without hooks clearing tools or injecting stale task instructions.
+- Test the published role schema and actual tool calls as well as source units. Report source-only verification separately from installed-plugin and Assistant-template upgrades.

@@ -69,6 +69,8 @@ When a capability is removed from an Assistant, both its tools and its gated Vie
 
 ## Compose Assistants from capabilities
 
+Middleware tool ownership does not imply hook-driven workflow control. For Agent-led orchestration, follow [Agent, Prompt, and Tool-Owned State](../../xpert-plugin-development/references/agent-prompt-tool-orchestration.md): Prompt/workflow describes responsibility, the Agent chooses the next tool, and domain tools persist transitions and validate access. Fixed capability filtering may remain in hooks; task status must not clear the next invocation's tools or inject a previous task's completion instruction.
+
 Build an Assistant by connecting only the middleware needed by each Agent. Do not use one universal middleware and ask the prompt to ignore most of its tools.
 
 Use the following mapping:

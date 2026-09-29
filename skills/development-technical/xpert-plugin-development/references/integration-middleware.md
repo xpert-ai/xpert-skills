@@ -1,5 +1,7 @@
 # Integration And Middleware Plugins
 
+For Agent middleware with business tasks or repeated External Assistant calls, also read [Agent, Prompt, and Tool-Owned State](agent-prompt-tool-orchestration.md). Keep explicit mutations and task validation in business tools/services; do not use hooks or reusable closure variables as a business workflow engine.
+
 ## What makes them different
 
 Compared with standard tool plugins, integration and middleware plugins usually have:

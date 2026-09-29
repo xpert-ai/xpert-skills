@@ -72,6 +72,8 @@ Do not maintain the same title, avatar, or question list as unrelated literals. 
 
 ## Design Responsibilities Before Graphs
 
+For Agent-led role delegation and recovery, read [Agent, Prompt, and Tool-Owned State](../xpert-plugin-development/references/agent-prompt-tool-orchestration.md). Align published Prompt workflows with explicit business tools and their acceptance receipts; never assume `disableMessageHistory` resets a compiled graph's middleware closures.
+
 Give every Agent one bounded responsibility. Add a child Agent only when it needs an isolated prompt, context, capability boundary, lifecycle, or reusable runtime entrypoint. Enforce authority with direct graph connections and tool exposure rather than prompts alone.
 
 For each child Agent:

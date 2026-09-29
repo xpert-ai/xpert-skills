@@ -15,6 +15,8 @@ The primary UI path for this skill is an Xpert extension view: a Workbench view 
 
 When designing or refactoring middleware responsibilities, View capability gates, Assistant composition, or the relationship between human and Agent roles, read [references/middleware-view-role-boundaries.md](references/middleware-view-role-boundaries.md) before implementing.
 
+For Agent-led task sequencing or repeated external-role execution, read [Agent, Prompt, and Tool-Owned State](../xpert-plugin-development/references/agent-prompt-tool-orchestration.md). Put task transitions and execution/permission checks in explicit business tools; keep mutable task state and retry policy out of middleware hooks and reusable closures.
+
 ## Golden Principle: Review Files Over 1,000 Lines
 
 Treat 1,000 lines as an architecture-review threshold for maintained source files. When a code file exceeds 1,000 lines, pause before adding more behavior and assess whether it combines multiple responsibilities. Split coherent responsibilities into focused files when clear boundaries exist, while preserving explicit ownership, stable public contracts, and test coverage. Do not mechanically fragment a cohesive file merely to satisfy the line count.

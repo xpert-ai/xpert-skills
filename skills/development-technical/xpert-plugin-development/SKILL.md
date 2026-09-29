@@ -36,6 +36,7 @@ Keep this skill to decisions, pitfalls, and lookup pointers. Inspect current SDK
 | Large or iterative data mutations | [large-data-mutation-workflows.md](references/large-data-mutation-workflows.md) |
 | Model providers | [model-plugins.md](references/model-plugins.md) |
 | Integrations, callbacks, notifications | [integration-middleware.md](references/integration-middleware.md) |
+| Agent-led tool sequencing, reused external graphs, hook/state isolation and task recovery | [agent-prompt-tool-orchestration.md](references/agent-prompt-tool-orchestration.md) |
 | Managed background jobs | [managed-queue.md](references/managed-queue.md) |
 | Keeping an Agent turn alive during queued work | [agent-long-running-tasks.md](references/agent-long-running-tasks.md) |
 | Workspace files and portable references | [workspace-files.md](references/workspace-files.md) |
