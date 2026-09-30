@@ -373,3 +373,9 @@ For `Sandbox Action bundle hash mismatch`, inspect the installed package rather 
 | Mix browser Jobs into the default queue | Keep the API-owned `sandbox-browser` physical pool separate and default its concurrency to one |
 | Retry deterministic validation errors | Respect runtime `retryable` and error codes |
 | Add feature flags for Runtime readiness | Default on; derive availability from Action and execution-pool health, with warning and HTML/fallback |
+
+## MCP Tasks And Layered Deadlines
+
+For [host-native MCP](host-native-mcp-capabilities.md), negotiated task support separates request completion from business completion; it does not change the runtime's execution budget. Check client/request waiting limits, queue attempts, Sandbox soft/hard deadlines and the action's own processing budget separately. Account for preparation and output persistence as well as rendering or conversion.
+
+Choose an existing suitable runtime profile or an explicitly scoped platform change. Do not fix a deadline only in an isolated environment and claim the repository is deployable. Distinguish transient capacity failures from insufficient time budgets before retrying. A retry must not reuse a temporary output that a previous attempt already removed.

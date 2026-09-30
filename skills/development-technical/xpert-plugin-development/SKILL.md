@@ -31,7 +31,7 @@ Keep this skill to decisions, pitfalls, and lookup pointers. Inspect current SDK
 | --- | --- |
 | Scaffolding, metadata, packaging, local deployment, credentials | [general.md](references/general.md) |
 | Tool schemas, DTOs, pagination, revisioned mutations, Agent titles/icons | [tool-contract-design.md](references/tool-contract-design.md) |
-| Decorated Providers, native MCP Tools/Apps, Publication scope and synchronization | [host-native-mcp-capabilities.md](references/host-native-mcp-capabilities.md) |
+| Decorated Providers, native MCP Tools/Apps, standalone clients, Publication scope and synchronization | [host-native-mcp-capabilities.md](references/host-native-mcp-capabilities.md) |
 | MCP App bridge/theme/security or portable stdio servers | [mcp-tools-and-apps.md](references/mcp-tools-and-apps.md) |
 | Large or iterative data mutations | [large-data-mutation-workflows.md](references/large-data-mutation-workflows.md) |
 | Model providers | [model-plugins.md](references/model-plugins.md) |
