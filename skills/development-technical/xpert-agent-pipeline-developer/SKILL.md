@@ -9,7 +9,7 @@ Turn a repeatable multi-role business process into a production Xpert pipeline. 
 
 This skill targets Xpert and a versioned directed acyclic graph (DAG) with deterministic routers and human gates. Do not invent a runtime-generated production process, unbounded loop, or general BPMN engine unless the user expands the scope.
 
-When the user explicitly chooses Agent-led orchestration, preserve that choice: the main Agent chooses delegation and retries from Prompt workflows and tool receipts, while domain tools enforce persisted invariants. Do not implement a second business state machine in model/tool lifecycle hooks or add retry budgets without a product requirement. Read [Agent, Prompt, and Tool-Owned State](../xpert-plugin-development/references/agent-prompt-tool-orchestration.md), including reuse, concurrency and restart regressions.
+When the user explicitly chooses Agent-led orchestration, preserve that choice: the main Agent chooses delegation and retries from the user goal, clear business rules and current tool receipts, while domain tools enforce persisted invariants. Minimize injected procedural instructions; return scope, state, evidence and corrective options so the Agent can decide. Do not implement a second business state machine in model/tool lifecycle hooks or add retry budgets without a product requirement. Read [Agent, Prompt, and Tool-Owned State](../xpert-plugin-development/references/agent-prompt-tool-orchestration.md), including reuse, concurrency and restart regressions.
 
 ## Route to Companion Skills
 

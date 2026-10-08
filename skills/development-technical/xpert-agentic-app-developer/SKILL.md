@@ -29,7 +29,7 @@ Treat 1,000 lines as an architecture-review threshold for maintained source file
 4. Define domain capability boundaries and map middleware, Views, Agent roles, and human authority according to [references/middleware-view-role-boundaries.md](references/middleware-view-role-boundaries.md).
 5. When the plugin should appear as a visually presented App in Xpert Explore and support host-governed setup of a dedicated Workspace, optional Knowledge bases, and a published Assistant, read [Plugin Application `appConfig`](references/plugin-application-app-config.md) and declare a typed `appConfig` linked to exactly one same-plugin Assistant template.
 6. Register the server module, entities, services, middleware, and view provider.
-7. Expose business actions as Agent middleware tools with strict schemas and call order. Before finalizing any tool input schema, read [references/agent-tool-parameter-design.md](references/agent-tool-parameter-design.md): the model supplies judgments only — call-level context appears once, server-recoverable data is never an input, array-element required fields must vary per element, and the model's natural payload shape must pass validation on the first try.
+7. Expose business actions as Agent middleware tools with strict schemas and explicit prerequisites. For Agent-led workflows, minimize injected procedural prompts: provide clear business rules, consistent scope and current tool feedback, leaving strategy and recovery to the Agent. Read [Agent, Prompt, and Tool-Owned State](../xpert-plugin-development/references/agent-prompt-tool-orchestration.md). Before finalizing any tool input schema, read [references/agent-tool-parameter-design.md](references/agent-tool-parameter-design.md): the model supplies judgments only — call-level context appears once, server-recoverable data is never an input, array-element required fields must vary per element, and the model's natural payload shape must pass validation on the first try.
 8. When a deterministic plugin workflow starts specialist subagents through the platform Assistant Task capability, read [references/assistant-task-orchestration.md](references/assistant-task-orchestration.md); when durable background work must keep the current Agent conversation turn alive because proactive completion delivery is unavailable, read [references/agent-long-running-tasks.md](references/agent-long-running-tasks.md) and implement the bounded long-polling bridge.
 9. Persist reviewable business data with evidence, confidence, status, and failure state.
 10. Add a Workbench or extension view for human review and operational actions. For Assistant Profile tabs and contextual decisions, read [references/assistant-profile-views.md](references/assistant-profile-views.md).
@@ -43,7 +43,7 @@ Treat 1,000 lines as an architecture-review threshold for maintained source file
 An Agentic App should usually include:
 
 - **Business plugin**: `XpertPlugin` metadata, system level and artifact namespace when server capabilities are present, config schema, target apps, capabilities, templates, lifecycle.
-- **Agent middleware tools**: zod schemas, tool descriptions, ordered tool calls, per-item persistence, failure reporting.
+- **Agent middleware tools**: zod schemas, tool semantics and prerequisites, per-item persistence, actionable failure reporting.
 - **Services and data models**: domain entities, review state, source evidence, confidence, audit-friendly outputs.
 - **Workbench or extension view**: view manifest, actions, data queries, host event subscriptions, optional remote component UI.
 - **Assistant template**: DSL content, required plugins, capabilities, model options, starter prompts.
@@ -213,7 +213,7 @@ Every plugin entity must support tenant and organization isolation. Add nullable
 
 ## Agent Middleware Tools
 
-Expose business actions through middleware tools. Keep each tool narrow and explicit. Prefer ordered, restartable workflows over one giant tool.
+Expose business actions through middleware tools. Keep each tool narrow, explicit and restartable. State prerequisites and outcomes; in Agent-led workflows the Agent chooses the applicable calls.
 
 When creating, changing, or reviewing model-visible middleware tools, also use the Xpert Plugin Development skill and read [its Tool Contract Design reference](../xpert-plugin-development/references/tool-contract-design.md). Treat that document as the canonical detailed contract for schemas, DTOs, pagination, authorization, localized ChatKit titles, Tool/Middleware icon inheritance, `changeSummary`, event payload filtering, and tests.
 

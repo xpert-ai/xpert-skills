@@ -7,6 +7,8 @@ description: Build, update, review, and diagnose Xpert Assistant YAML DSL graphs
 
 Build Assistant DSLs from the current Xpert platform contract, not from memory or a copied example. Treat source definitions, plugin contributions, generated YAML, installed drafts, published graphs, and runtime executions as separate layers that must agree.
 
+For Agent-led Assistants, keep prompts focused on role, authority and output requirements. Prefer clear tool contracts and live scope/state diagnostics over injected call sequences or repeated repair instructions; follow [Agent-led contracts and feedback](../xpert-plugin-development/references/agent-prompt-tool-orchestration.md#prefer-clear-contracts-and-live-feedback-over-injected-instructions).
+
 ## Start Here
 
 1. Run `node scripts/inspect-dsl-contract.mjs` from this skill before editing a DSL. Resolve contract drift before relying on the bundled schema.
