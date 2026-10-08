@@ -181,3 +181,7 @@ Test at least:
 10. the Assistant loops until terminal and produces only one concise final response
 
 Before choosing concrete values, verify the host Agent recursion limit, total execution timeout, connector idle timeout, and expected worst-case job duration. Keep enough margin for database queries and the final model response.
+
+## Boundary With MCP Tasks
+
+This guide addresses an Agent connector's inability to deliver a later completion message. External MCP clients may support negotiated task execution and status retrieval instead; inspect host/client support before adding an Agent wait loop. Neither approach extends business or Sandbox execution deadlines. See [host-native-mcp.md](host-native-mcp-capabilities.md) and [sandbox-jobs.md](sandbox-jobs.md).

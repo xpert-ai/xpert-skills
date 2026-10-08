@@ -31,6 +31,26 @@ Use native Providers for business methods executed and governed by Xpert. Use st
 - Manual Publications require **Refresh available capabilities → select → Save**. Catalog refresh alone does not publish a new binding. Refresh/reconnect the client afterward; do not recreate the endpoint or alter unrelated organization grants.
 - Verify `initialize`, `tools/list`, and a read-only `tools/call`. For Apps, match Tool `_meta.ui.resourceUri` to `resources/list/read`, check HTML MIME and DTO, and test rendering separately in an Apps-capable client. Cover cross-organization denial, invalid declarations, and synchronization preserving policy.
 
+## Standalone client execution
+
+- Inspect dependencies previously supplied by the Agent or Workbench: principal, file binding, Project/Assistant, model configuration and runtime capabilities. Reuse working domain services; MCP exposure alone does not require a new model-selection API, queue or storage system. An existing Sandbox transcription engine may already satisfy the workflow.
+- Keep plugin business project IDs distinct from platform Project/Assistant IDs and file owners. External clients do not inherit an Agent workspace. Use authenticated host file transport and portable references; see [workspace-files.md](workspace-files.md).
+- Tools perform actions or parameterized operations; Resources expose addressable state/results; Prompts guide workflows. Do not duplicate every Resource as a Tool or merge unrelated operations merely to reduce a count.
+- For SDK versions exporting `ResourceReadContext`, use it for Resource/Template read callbacks. Return the supplied `resourceUri` for the requested resource, preserving optional query parameters and encoding. Keep resource-specific fields out of ordinary execution contexts. Verify target SDK support and test omitted parameters, pagination and encoded values.
+- Server instructions, tool descriptions, Prompts and installed Skills are different delivery mechanisms. A bundled Skill is not automatically loaded by every MCP client. Put essential defaults in discoverable contracts/instructions so users need not specify internal mode flags; respect explicit choices and report missing prerequisites instead of silently changing engines.
+
+## Confirmation and long tasks
+
+- Distinguish approval of the business plan, client tool approval and host publication policy. Reuse valid user authorization for the same scope, but do not bypass an enforced gate or make all writes directly executable as a general workaround.
+- Diagnose rejected confirmation using protocol results and invocation records before assigning blame to a client. The host owns session continuity, principal binding and audit correlation. Shared Redis data does not itself restore a live SDK transport or pending confirmation after restart; do not automatically replay a possibly completed mutation.
+- MCP Tasks separate request waiting from completion only when host/client support is negotiated. They do not extend Sandbox or business deadlines. See [sandbox-jobs.md](sandbox-jobs.md) for layered budgets and [managed-queue.md](managed-queue.md) for queued identity and policy checks. The Agent wait pattern in [agent-long-running-tasks.md](agent-long-running-tasks.md) addresses a different connector delivery gap.
+
+## Artifact-producing acceptance
+
+For plugins producing files, go beyond discovery and a read-only call: verify an external client can supply an input, invoke work, observe terminal status, read the result and retrieve the output. Inspect meaningful artifact content; a saved project, job ID or progress percentage is not completed delivery. Keep status reads lightweight.
+
+Report unit tests, published-dependency builds, plugin lifecycle, real-client execution and artifact checks separately. A local SDK substitution proves paired-source compatibility only; follow [general.md](general.md) before release. Preserve existing developer processes during isolated validation. Keep fixture findings, model names and runtime limits in plugin-specific docs rather than making them universal Skill rules.
+
 ## Source and documentation pointers
 
 Resolve these paths within the selected checkout; inspect types and adjacent tests instead of copying implementation here.
