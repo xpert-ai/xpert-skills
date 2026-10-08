@@ -26,6 +26,8 @@ Read [setup-and-lifecycle.md](references/setup-and-lifecycle.md) before setup, s
 
 For a fresh database or first administrator, also read [first-user-initialization.md](references/first-user-initialization.md). A local setup request can finish at `platform_ready` with verified user access; plugin selection and model configuration are required only when the user's task needs them. Omit `--plugin-dir` from the examples below when no plugin is in scope.
 
+For running initialized agents, Bosi/ClawXpert, or workspace/terminal tools, read [sandbox-readiness.md](references/sandbox-readiness.md). Setup enables NsJail by default alongside database and Redis; verify an actual command before claiming the agent is runnable.
+
 ## Workflow
 
 ### 1. Inspect Without Mutation
@@ -68,7 +70,7 @@ node <skill-dir>/scripts/setup-xpert-local-environment.mjs \
   --apply
 ```
 
-The command may clone the official public Xpert repository when the exact target path is absent, create missing local `.env` files from the checked-out template with generated local-only secrets, run the repository-owned bootstrap, start namespaced infrastructure and source processes, wait for health, and write a secret-free receipt. It must not overwrite existing configuration or update/switch an existing checkout.
+The command may clone the official public Xpert repository when the exact target path is absent, create missing local `.env` files from the checked-out template with generated local-only secrets, run the repository-owned bootstrap, start namespaced infrastructure (including NsJail) and source processes, wait for health, and write a secret-free receipt. It must not overwrite existing configuration or update/switch an existing checkout.
 
 ### 3. Respect Human and Security Gates
 
@@ -90,7 +92,7 @@ A request to set up the system through creation of a super administrator authori
 Platform readiness requires more than dependency installation:
 
 1. the selected checkout and exact commit are recorded;
-2. infrastructure is healthy or explicitly reused;
+2. infrastructure and the default NsJail runner are healthy;
 3. the API readiness endpoint passes;
 4. the Cloud UI is reachable;
 5. source listeners belong to the selected checkout, or Docker containers belong to the selected Compose project;

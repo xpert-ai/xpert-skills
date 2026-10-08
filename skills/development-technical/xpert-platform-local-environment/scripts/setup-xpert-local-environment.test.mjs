@@ -24,6 +24,11 @@ function fixture(t) {
   const bin = join(workspace, 'bin')
   mkdirSync(join(platform, 'docker'), { recursive: true })
   mkdirSync(bin)
+  mkdirSync(join(platform, '.deploy/nsjail-runner'), { recursive: true })
+  writeFileSync(join(platform, '.deploy/nsjail-runner/docker-compose.nsjail.yml'),
+    'services:\n  nsjail-runner:\n    build:\n      context: .\n    volumes:\n      - ./docker/volumes/api/sandbox/:/sandbox/\n')
+  const fetchMock = join(workspace, 'fetch.mjs')
+  writeFileSync(fetchMock, `globalThis.fetch = async (url) => new Response(JSON.stringify({status: String(url).includes('/api/') ? 'ready' : 'ok'}), {status: 200});`)
   writeFileSync(join(platform, '.gitignore'), '.env\ndocker/.env\n')
   writeFileSync(join(platform, 'docker/env.example'), template)
   writeFileSync(join(platform, 'package.json'), JSON.stringify({
@@ -36,6 +41,14 @@ function fixture(t) {
 const fs = require('node:fs');
 const name = require('node:path').basename(process.argv[1]);
 const args = process.argv.slice(2);
+if (process.env.TEST_DOCKER_CALLS && name === 'docker') {
+  fs.appendFileSync(process.env.TEST_DOCKER_CALLS, JSON.stringify(args) + '\\n');
+  if (args[0] === 'ps') {
+    const project = 'platform-' + require('node:crypto').createHash('sha256').update(process.env.TEST_PLATFORM).digest('hex').slice(0, 8);
+    for (const service of ['api', 'webapp', 'nsjail-runner']) console.log(JSON.stringify({Names: project + '-' + service + '-1', Ports: '127.0.0.1:8090->8090/tcp'}));
+    process.exit(0);
+  }
+}
 if (name === 'security') {
   fs.writeFileSync(process.env.TEST_SECURITY_CALL, 'unexpected credential lookup');
   process.exit(1);
@@ -54,18 +67,26 @@ if (name === 'lsof' && !args.includes('-v')) {
   for (const name of ['docker', 'corepack', 'lsof', 'security']) {
     writeFileSync(join(bin, name), stub, { mode: 0o755 })
   }
-  const run = (mode = 'source', extraEnv = {}) => {
+  const run = (mode = 'source', extraEnv = {}, start = false, expectedStatus = 0) => {
     const env = { ...process.env, ...extraEnv, PATH: `${bin}:${process.env.PATH}`,
       TEST_SECURITY_CALL: join(workspace, 'security-called') }
+    if (start) {
+      env.TEST_DOCKER_CALLS = join(workspace, 'docker-calls')
+      env.TEST_PLATFORM = platform
+      if (mode === 'source') {
+        env.TEST_LISTENER_CWD = platform
+        env.TEST_LISTENER_COUNT = join(workspace, 'listener-count')
+      }
+    }
     delete env.XPERT_TOKEN
     delete env.XPERT_USERNAME
     delete env.XPERT_PASSWORD
-    const result = spawnSync(process.execPath, [setup,
+    const result = spawnSync(process.execPath, [...(start ? ['--import', fetchMock] : []), setup,
       '--workspace', workspace, '--platform', platform, '--state-dir', state,
-      '--mode', mode, '--skip-bootstrap', '--skip-start', '--apply',
+      '--mode', mode, '--skip-bootstrap', ...(start ? ['--reuse-infra'] : ['--skip-start']), '--apply',
       '--api-url', 'http://127.0.0.1:1/api/health/ready', '--web-url', 'http://127.0.0.1:1/'
     ], { env, encoding: 'utf8', timeout: 20000 })
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.status, expectedStatus, result.stderr)
     return { ...result, receipt: JSON.parse(readFileSync(join(state, 'state.json'), 'utf8')) }
   }
   const read = (relative) => readFileSync(join(platform, relative), 'utf8')
@@ -90,6 +111,13 @@ test('fresh source configuration uses private host paths and aligned secrets wit
   assert.equal(statSync(f.state).mode & 0o777, 0o700)
   assert.deepEqual(result.receipt.remainingActions, [])
   assert.equal(existsSync(join(f.workspace, 'security-called')), false)
+  const runnerToken = source.match(/^NSJAIL_RUNNER_TOKEN=(.+)$/m)[1]
+  assert.ok(runnerToken.length >= 32)
+  assert.ok(docker.includes(`NSJAIL_RUNNER_TOKEN=${runnerToken}\n`))
+  assert.ok(source.includes('NSJAIL_RUNNER_URL=http://127.0.0.1:8090\n'))
+  assert.ok(source.includes(`SANDBOX_VOLUME=${f.platform}/docker/volumes/api/sandbox\n`))
+  assert.ok(!result.stdout.includes(runnerToken))
+  assert.ok(!JSON.stringify(result.receipt).includes(runnerToken))
 })
 
 test('source generated from existing Docker config remaps overriding log path and preserves Docker bytes', (t) => {
@@ -128,4 +156,37 @@ test('receipt records verified listener PID separately from launcher metadata', 
   assert.equal(receipt.processes.api.listenerPid, 4343)
   assert.equal(receipt.processes.cloud.listenerPid, 4343)
   assert.equal(receipt.processes.provenance.apiOwnedBySelectedCheckout, true)
+})
+
+test('source setup starts and checks NsJail by default without opt-in', (t) => {
+  const f = fixture(t)
+  const { receipt } = f.run('source', {}, true)
+  const calls = readFileSync(join(f.workspace, 'docker-calls'), 'utf8').trim().split('\n').map(JSON.parse)
+  const start = calls.find((args) => args.includes('up'))
+  assert.ok(start.includes('--no-deps'))
+  assert.equal(start.at(-1), 'nsjail-runner')
+  assert.ok(start.some((arg) => arg.endsWith('docker-compose.nsjail.dev.yml')))
+  assert.equal(receipt.sandbox.rpcReady, true)
+  assert.equal(receipt.status, 'platform_ready')
+})
+
+test('Docker setup includes NsJail with corrected build and volume paths', (t) => {
+  const f = fixture(t)
+  const { receipt } = f.run('docker', {}, true)
+  const overlay = readFileSync(join(f.state, 'nsjail-compose.yml'), 'utf8')
+  assert.ok(overlay.includes(`context: ${JSON.stringify(f.platform)}`))
+  assert.ok(overlay.includes(`${f.platform}/docker/volumes/api/sandbox:/sandbox/`))
+  const calls = readFileSync(join(f.workspace, 'docker-calls'), 'utf8').trim().split('\n').map(JSON.parse)
+  assert.ok(calls.find((args) => args.includes('up')).includes(join(f.state, 'nsjail-compose.yml')))
+  assert.ok(calls.some((args) => args.includes('exec') && args.includes('nsjail-runner')))
+  assert.equal(receipt.sandbox.rpcReady, true)
+})
+
+test('incomplete existing configuration blocks startup without overwriting it', (t) => {
+  const f = fixture(t)
+  writeFileSync(join(f.platform, '.env'), template)
+  const { receipt } = f.run('source', {}, true, 1)
+  assert.match(receipt.error, /Existing configuration needs NsJail keys/)
+  assert.equal(f.read('.env'), template)
+  assert.ok(!readFileSync(join(f.workspace, 'docker-calls'), 'utf8').includes('"up"'))
 })

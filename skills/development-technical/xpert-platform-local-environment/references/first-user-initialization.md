@@ -38,3 +38,5 @@ After creating the tenant and organization:
 5. Report the URL, account name, credential-file link, organization, and startup instructions. Note unconfigured model providers when relevant; do not require provider secrets to complete account setup.
 
 Record database freshness and initialization results alongside the environment receipt. `platform_ready` plus verified administrator access completes this scope; `plugin_test_ready` still requires the separate plugin-specific gates.
+
+Setup enables NsJail by default. Before handing off agent testing, verify one sandbox command and a fresh conversation as described in [sandbox-readiness.md](sandbox-readiness.md).

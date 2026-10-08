@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, realpathSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { inspectNsjailReadiness } from './inspect-nsjail-readiness.mjs'
 
 const VALUE_OPTIONS = new Set([
   'workspace',
@@ -12,7 +13,8 @@ const VALUE_OPTIONS = new Set([
   'mode',
   'api-url',
   'web-url',
-  'compose-project'
+  'compose-project',
+  'sandbox-provider'
 ])
 
 function usage() {
@@ -27,6 +29,7 @@ Options:
   --api-url <url>            Override API readiness URL
   --web-url <url>            Override Cloud UI URL
   --compose-project <name>   Override the derived Compose project name
+  --sandbox-provider nsjail  Also check source-mode NsJail config and authenticated RPC health
   --json                     Print JSON only
   --strict                   Exit non-zero for readiness errors
   --help                     Show this help
@@ -60,6 +63,9 @@ function parseArgs(argv) {
 
   if (!['auto', 'source', 'docker'].includes(options.mode)) {
     throw new Error(`Unsupported mode: ${options.mode}`)
+  }
+  if (options['sandbox-provider'] && options['sandbox-provider'] !== 'nsjail') {
+    throw new Error('Only --sandbox-provider nsjail is supported; inspect other providers separately.')
   }
   return options
 }
@@ -290,6 +296,7 @@ function printHuman(report) {
   console.log(`Cloud: ${report.endpoints.web.reachable ? 'reachable' : 'not reachable'} (${report.endpoints.web.url})`)
   console.log(`Source config: ${report.configuration.sourceEnv ? 'present' : 'missing'}`)
   console.log(`Docker config: ${report.configuration.dockerEnv ? 'present' : 'missing'}`)
+  console.log(`Sandbox: ${report.sandbox ? (report.sandbox.rpcReady ? 'nsjail RPC ready; execution not checked' : 'nsjail not ready') : 'not checked (platform health only)'}`)
   if (report.plugin) {
     console.log(`Plugin: ${report.plugin.path}`)
     console.log(`Plugin workspace allowlisted: ${String(report.plugin.workspaceAllowlisted)}`)
@@ -348,6 +355,12 @@ const system = {
   lsof: commandVersion('lsof', ['-v'])
 }
 const issues = []
+const sandbox = options['sandbox-provider'] === 'nsjail'
+  ? (inferredMode === 'source'
+      ? await inspectNsjailReadiness(sourceEnv)
+      : { provider: 'nsjail', rpcReady: false, execution: 'not_checked', error: 'For Docker mode, check NsJail from the API container network; host configuration does not prove container connectivity.' })
+  : null
+if (sandbox?.error) issues.push({ severity: 'error', message: sandbox.error })
 
 if (!system.git.available) issues.push({ severity: 'error', message: 'Git is required.' })
 if (!platform) issues.push({ severity: 'error', message: `Selected Xpert checkout is missing or invalid: ${platformPath}` })
@@ -419,6 +432,7 @@ const report = {
     api: apiProbe,
     web: webProbe
   },
+  sandbox,
   listeners: {
     api: apiListeners,
     web: webListeners

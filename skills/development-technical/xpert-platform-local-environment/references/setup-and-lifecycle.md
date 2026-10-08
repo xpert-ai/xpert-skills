@@ -33,7 +33,7 @@ Use source-hybrid by default for plugin and Agentic App development:
 2. read its `AGENTS.md`, root `package.json`, package-manager declaration, bootstrap script, Compose files, and environment template;
 3. create only missing local configuration;
 4. run the repository-owned bootstrap through Corepack;
-5. start only the default infrastructure from the checked-out infrastructure Compose file under an explicit project name;
+5. start database, Redis, and the default NsJail runner under an explicit Compose project name; verify authenticated runner health before starting the source API;
 6. start API and Cloud with the checked-out repository's scripts;
 7. wait for the current readiness endpoint and UI URL;
 8. prove both listeners belong to this checkout;
@@ -56,6 +56,7 @@ When generating fresh local configuration:
 - generate random local values for session, JWT, encryption, MCP state/token, database, and Redis secrets;
 - keep values aligned between source and infrastructure configuration where they represent the same dependency;
 - set source-mode API/UI URLs and ports explicitly;
+- enable NsJail by default: generate its token, use host loopback port `8090` for source API or the service URL for Docker API, set a dedicated sandbox directory and matching UID/GID; use Docker Desktop development resource mode on macOS;
 - use writable host paths for source `LOG_DIR` and `XPERT_TEMPLATE_DIR`, under the environment state directory; remap `LOG_FILE_PATH` as well when it is set, because it overrides `LOG_DIR`;
 - set `PLUGIN_WORKSPACE_ROOTS` to the narrowest parent containing the supplied plugin repository;
 - never print secret values or include them in the receipt;
@@ -92,7 +93,7 @@ Use full Docker when the goal is a released/self-hosted platform smoke test:
 
 1. create `docker/.env` only when absent;
 2. create required bind-mount directories without deleting or changing existing contents;
-3. start the checked-out `docker/docker-compose.yml` with an explicit project name;
+3. start the checked-out `docker/docker-compose.yml` with the NsJail overlay and an explicit project name; the setup script adapts the overlay build/mount paths to the Docker Compose base directory;
 4. wait for the API container healthcheck and web endpoint;
 5. verify containers and published ports belong to that Compose project.
 
@@ -134,6 +135,7 @@ Infrastructure ports may be reused only after the user or existing environment c
 | Plugin deploy requests restart | deployment receipt and API log | Restart the selected API, recheck provenance/health, then verify runtime. |
 | Bootstrap fails | first failing repository command and tool versions | Fix that prerequisite and resume; do not delete `node_modules` or lockfiles by default. |
 | Source API cannot create logs or templates under `/var/lib/xpert` | `LOG_DIR`, `LOG_FILE_PATH`, `XPERT_TEMPLATE_DIR` and configuration provenance | Correct task-generated source paths to writable local directories, restart API, and refresh receipt PIDs. |
+| Agent reports NsJail provider unavailable while API is ready | selected agent sandbox and API `NSJAIL_RUNNER_URL`/`NSJAIL_RUNNER_TOKEN` | Follow [sandbox-readiness.md](sandbox-readiness.md); configure/start the matching runner, preserve workspace paths, restart API, and prove an actual scoped command. |
 | Docker bind mount denied | exact mount and owner/mode | Request the documented permission action; do not elevate automatically. |
 | Existing `.env` is incomplete | missing key names and checked-out template | Ask for or add only non-secret safe defaults; never replace the file wholesale. |
 
