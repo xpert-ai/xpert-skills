@@ -10,7 +10,7 @@ import {
   realpathSync,
   writeFileSync
 } from 'node:fs'
-import { basename, dirname, join, parse, resolve } from 'node:path'
+import { basename, dirname, join, parse, relative, resolve } from 'node:path'
 import { spawn, spawnSync } from 'node:child_process'
 
 const OFFICIAL_REPOSITORY = 'https://github.com/xpert-ai/xpert.git'
@@ -245,7 +245,8 @@ function freshSecretOverrides() {
 }
 
 function ensureIgnored(platformPath, targetPath) {
-  const relativePath = targetPath.slice(canonicalPath(platformPath).length + 1)
+  // Both paths use the caller's spelling; /var may resolve to /private/var on macOS.
+  const relativePath = relative(resolve(platformPath), resolve(targetPath))
   const result = run('git', ['check-ignore', '-q', '--', relativePath], { cwd: platformPath })
   if (!result.ok) throw new Error(`Refusing to create a local configuration file that is not ignored: ${targetPath}`)
 }
@@ -260,7 +261,7 @@ function writeExclusive(path, content) {
   }
 }
 
-function materializeConfiguration({ platformPath, workspace, pluginPath, mode }) {
+function materializeConfiguration({ platformPath, workspace, pluginPath, mode, stateDir }) {
   const templatePath = join(platformPath, 'docker', 'env.example')
   const sourceEnvPath = join(platformPath, '.env')
   const dockerEnvPath = join(platformPath, 'docker', '.env')
@@ -281,6 +282,12 @@ function materializeConfiguration({ platformPath, workspace, pluginPath, mode })
   sourceOverrides.set('CORS_ALLOW_ORIGINS', 'http://localhost:4200')
   sourceOverrides.set('DB_HOST', 'localhost')
   sourceOverrides.set('REDIS_HOST', 'localhost')
+  // Container paths from env.example are not writable host defaults on macOS.
+  sourceOverrides.set('LOG_DIR', join(stateDir, 'logs'))
+  sourceOverrides.set('XPERT_TEMPLATE_DIR', join(stateDir, 'xpert-template'))
+  if (parseEnv(base).get('LOG_FILE_PATH')) {
+    sourceOverrides.set('LOG_FILE_PATH', join(stateDir, 'logs', 'xpert-server.log'))
+  }
   sourceOverrides.set('PLUGIN_WORKSPACE_ROOTS', canonicalPath(pluginPath || workspace))
   const dockerOverrides = new Map(commonOverrides)
   dockerOverrides.set('API_BASE_URL', 'http://localhost:3000')
@@ -595,7 +602,7 @@ try {
     if (typeof packageInfo.scripts[key] !== 'string') throw new Error(`Required platform script is missing: ${key}`)
   }
 
-  const configuration = materializeConfiguration({ platformPath, workspace, pluginPath, mode: options.mode })
+  const configuration = materializeConfiguration({ platformPath, workspace, pluginPath, mode: options.mode, stateDir })
 
   if (options.mode === 'source' && !options['skip-bootstrap']) {
     console.log('Running repository bootstrap')
@@ -603,7 +610,7 @@ try {
     if (!bootstrapped.ok) throw new Error('Repository bootstrap failed.')
   }
 
-  mkdirSync(stateDir, { recursive: true })
+  mkdirSync(stateDir, { recursive: true, mode: 0o700 })
   const processes = {
     api: adoptedApi ? { pid: adoptedApi.pid, adopted: true, log: null } : null,
     cloud: adoptedWeb ? { pid: adoptedWeb.pid, adopted: true, log: null } : null
@@ -688,7 +695,7 @@ try {
   const compatibility = pluginCompatibility(platformPath, pluginPath)
   const hasDeployCommand = typeof packageInfo.scripts['plugin:deploy:local'] === 'string'
   const hasAssistantCommand = typeof packageInfo.scripts['assistant:suite:init'] === 'string'
-  const authReady = credentialsAvailable()
+  const authReady = pluginPath ? credentialsAvailable() : false
   const platformReady = Boolean(apiReady && webReady)
   const pluginTestReady = Boolean(platformReady && pluginPath && allowlisted && hasDeployCommand && authReady)
   const status = pluginTestReady ? 'plugin_test_ready' : (platformReady ? 'platform_ready' : 'configured')
@@ -696,7 +703,6 @@ try {
   if (pluginPath && allowlisted !== true) remainingActions.push('Add the plugin path to PLUGIN_WORKSPACE_ROOTS without replacing existing configuration.')
   if (pluginPath && !hasDeployCommand) remainingActions.push('Inspect the checked-out platform local plugin deployment contract.')
   if (pluginPath && !authReady) remainingActions.push('Configure local Xpert deployment credentials through the approved credential store.')
-  if (!pluginPath) remainingActions.push('Select a plugin and use xpert-plugin-development for deployment/runtime verification.')
 
   const finalGit = gitInfo(platformPath)
   const receipt = {
@@ -724,7 +730,8 @@ try {
       }))
     },
     processes: {
-      ...processes,
+      api: processes.api ? { ...processes.api, listenerPid: finalApiOwner?.pid || null } : null,
+      cloud: processes.cloud ? { ...processes.cloud, listenerPid: finalWebOwner?.pid || null } : null,
       provenance: options.mode === 'source' ? {
         apiOwnedBySelectedCheckout: Boolean(finalApiOwner),
         cloudOwnedBySelectedCheckout: Boolean(finalWebOwner)
@@ -762,7 +769,7 @@ try {
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error)
   try {
-    mkdirSync(stateDir, { recursive: true })
+    mkdirSync(stateDir, { recursive: true, mode: 0o700 })
     writeFileSync(join(stateDir, 'state.json'), `${JSON.stringify({
       schemaVersion: 1,
       generatedAt: new Date().toISOString(),

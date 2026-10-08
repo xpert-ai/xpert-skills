@@ -1,13 +1,13 @@
 ---
 name: xpert-platform-local-environment
-description: Provision, start, inspect, repair, and verify a local Xpert platform environment for plugin and Agentic App testing, using a source checkout with Docker infrastructure by default or full Docker smoke mode. Use when Xpert must be cloned, bootstrapped, made healthy, or proven to be the exact instance loading a local plugin; do not use for plugin implementation itself.
+description: Provision, start, inspect, repair, initialize, and verify a local Xpert platform environment, using source with Docker infrastructure by default or full Docker smoke mode. Use for local setup, a fresh database and first administrator, or plugin-test readiness; do not use for plugin implementation itself.
 ---
 
 # Xpert Platform Local Environment
 
 Bring one explicitly selected Xpert checkout to a reproducible, plugin-test-ready local state. Default to `source-hybrid`: run infrastructure with Docker Compose and run the API and Cloud UI from the selected source checkout. Use full Docker only for platform smoke testing or when live host/plugin SDK debugging is not required.
 
-This skill owns platform checkout, local configuration materialization, infrastructure, API/UI process provenance, health verification, recovery guidance, and a secret-free environment receipt. It does not own plugin code, plugin installation semantics, Assistant DSLs, or application acceptance.
+This skill owns platform checkout, local configuration materialization, infrastructure, authorized first-user initialization, API/UI process provenance, health verification, recovery guidance, and a secret-free environment receipt. It does not own plugin code, plugin installation semantics, Assistant DSLs, or application acceptance.
 
 ## Route to Companion Skills
 
@@ -23,6 +23,8 @@ This skill owns platform checkout, local configuration materialization, infrastr
 | `docker` | Quickly proving a released platform image or reproducing ordinary self-hosted behavior | Do not assume an arbitrary host plugin path is visible inside the API container. Use a supported mount/package flow or switch to source mode for local-code plugins. |
 
 Read [setup-and-lifecycle.md](references/setup-and-lifecycle.md) before setup, start, repair, mode switching, port remediation, or configuration changes. Read [plugin-test-readiness.md](references/plugin-test-readiness.md) before handing the environment to plugin deployment or claiming it is ready for application testing.
+
+For a fresh database or first administrator, also read [first-user-initialization.md](references/first-user-initialization.md). A local setup request can finish at `platform_ready` with verified user access; plugin selection and model configuration are required only when the user's task needs them. Omit `--plugin-dir` from the examples below when no plugin is in scope.
 
 ## Workflow
 
@@ -76,10 +78,12 @@ Pause with a specific action when any of these is required:
 - a branch/ref choice that would change an existing checkout;
 - port ownership by another checkout or Compose project;
 - elevated volume permissions;
-- first-user/platform initialization;
+- first-user/platform initialization when not already authorized by the user;
 - Xpert deployment credentials or model/provider secrets.
 
 Never ask the user to paste passwords or tokens into chat. Never inspect browser storage, cookies, shell history, or unrelated process environments. Prefer the credential mechanism defined by `xpert-plugin-development` after platform readiness.
+
+A request to set up the system through creation of a super administrator authorizes that initialization. Follow the linked initialization procedure without asking for the same permission again; pause only for a separate unresolved gate.
 
 ### 4. Prove Plugin-Test Readiness
 

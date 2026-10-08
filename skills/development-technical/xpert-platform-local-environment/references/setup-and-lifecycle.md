@@ -41,6 +41,12 @@ Use source-hybrid by default for plugin and Agentic App development:
 
 For the current platform shape, expected scripts commonly include `bootstrap`, `start:api`, `start:cloud`, `plugin:deploy:local`, `assistant:suite:init`, and `remote-view:preview`. Discover them from the checked-out `package.json`; do not assume they remain stable.
 
+Check the installed Node version against the checkout's dependencies before bootstrap. Use a compatible installed runtime consistently for both bootstrap and detached API/UI processes; recording one Node version while launching services with another makes the receipt misleading.
+
+On macOS, a present Docker CLI does not imply a running daemon. Check the server with `docker info`; start the installed Docker application when needed for the authorized setup. Once the daemon is ready, repeat container and port inspection: old containers with restart policies may start automatically. Keep unrelated instances intact.
+
+When the user requests an empty database, split infrastructure startup from API startup and follow [first-user-initialization.md](first-user-initialization.md) to capture emptiness before schema synchronization. The one-shot setup command starts the API immediately after infrastructure and does not capture that proof.
+
 ### Local configuration
 
 Do not overwrite an existing `.env`. For a fresh public checkout, derive missing local configuration from the checked-out `docker/env.example`, not from copied documentation or another user's environment.
@@ -50,11 +56,14 @@ When generating fresh local configuration:
 - generate random local values for session, JWT, encryption, MCP state/token, database, and Redis secrets;
 - keep values aligned between source and infrastructure configuration where they represent the same dependency;
 - set source-mode API/UI URLs and ports explicitly;
+- use writable host paths for source `LOG_DIR` and `XPERT_TEMPLATE_DIR`, under the environment state directory; remap `LOG_FILE_PATH` as well when it is set, because it overrides `LOG_DIR`;
 - set `PLUGIN_WORKSPACE_ROOTS` to the narrowest parent containing the supplied plugin repository;
 - never print secret values or include them in the receipt;
 - preserve generated files only when they are ignored by the target repository.
 
 If existing source and infrastructure files disagree on dependency credentials or ports, report the key names only and stop. Do not rewrite either file automatically.
+
+Keep container paths in Docker configuration. The generator adapts paths only when creating a missing source `.env`. If a configuration generated during the current task causes a host-path failure, make a targeted correction and restart the affected service; do not elevate permissions to make `/var/lib/xpert` writable. Preserve pre-existing user configuration and inspect it before proposing a change.
 
 ### Process state and logs
 
@@ -71,7 +80,11 @@ The state file contains paths, PIDs, endpoints, Compose project, commit, and tim
 
 A saved PID is a hint, not proof. Verify that the process exists, its command/current directory belongs to the selected checkout, and its expected port and endpoint are healthy.
 
+Record the launcher PID separately from the actual `listenerPid`: Corepack, pnpm, and Nx can introduce several parent processes. After a targeted restart, update both process identity and health evidence in the receipt. Do not leave the old launcher PID in a successful handoff.
+
 Start source processes with output redirected to the protected environment log files, and inspect only bounded tails or targeted matches during readiness and diagnosis. Startup frameworks may print expanded configuration or environment payloads; never stream or copy an unbounded startup log into chat, a receipt, or CI output. Redact secret-bearing lines, prefer quiet health polling, and report only the failing subsystem, stable error, provenance, and log path needed for follow-up.
+
+First startup can spend time compiling and installing the template's default `PLUGINS` before opening the API port. Use bounded log progress and child-process state to distinguish active work from failure. Once health passes, check for skipped initialization such as template-directory permission errors; readiness alone does not prove every bootstrap subsystem succeeded. A browser opened before API readiness may remain on `/onboarding/unknown`; navigate back to the root after the API is ready.
 
 ## Docker Smoke Mode
 
@@ -95,6 +108,7 @@ Do not claim an arbitrary host plugin `workspacePath` can be loaded in Docker mo
 - Requested ref on a missing target: clone that branch/tag when Git supports it.
 - Requested ref on an existing target: do not switch automatically; require the checkout already matches or stop for a user decision.
 - Never infer that the newest branch is required. Record the platform commit used for plugin acceptance.
+- Compare Git status before and after bootstrap. Repository builds may regenerate tracked remote-component assets; disclose these separately from manual source edits and do not reset them automatically.
 
 ## Port and Ownership Rules
 
@@ -119,6 +133,7 @@ Infrastructure ports may be reused only after the user or existing environment c
 | API ready, UI unavailable | Cloud process/log, UI port, API proxy config | Restart only the selected Cloud process after fixing the cause. |
 | Plugin deploy requests restart | deployment receipt and API log | Restart the selected API, recheck provenance/health, then verify runtime. |
 | Bootstrap fails | first failing repository command and tool versions | Fix that prerequisite and resume; do not delete `node_modules` or lockfiles by default. |
+| Source API cannot create logs or templates under `/var/lib/xpert` | `LOG_DIR`, `LOG_FILE_PATH`, `XPERT_TEMPLATE_DIR` and configuration provenance | Correct task-generated source paths to writable local directories, restart API, and refresh receipt PIDs. |
 | Docker bind mount denied | exact mount and owner/mode | Request the documented permission action; do not elevate automatically. |
 | Existing `.env` is incomplete | missing key names and checked-out template | Ask for or add only non-secret safe defaults; never replace the file wholesale. |
 
