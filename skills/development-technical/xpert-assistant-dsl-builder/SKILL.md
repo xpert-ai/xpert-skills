@@ -7,6 +7,8 @@ description: Build, update, review, and diagnose Xpert Assistant YAML DSL graphs
 
 Build Assistant DSLs from the current Xpert platform contract, not from memory or a copied example. Treat source definitions, plugin contributions, generated YAML, installed drafts, published graphs, and runtime executions as separate layers that must agree.
 
+For Agent-led Assistants, keep prompts focused on role, authority and output requirements. Prefer clear tool contracts and live scope/state diagnostics over injected call sequences or repeated repair instructions; follow [Agent-led contracts and feedback](../xpert-plugin-development/references/agent-prompt-tool-orchestration.md#prefer-clear-contracts-and-live-feedback-over-injected-instructions).
+
 ## Start Here
 
 1. Run `node scripts/inspect-dsl-contract.mjs` from this skill before editing a DSL. Resolve contract drift before relying on the bundled schema.
@@ -71,6 +73,8 @@ Do not maintain the same title, avatar, or question list as unrelated literals. 
 `startPrompts` is catalog/application metadata, while `team.features.opener.questions` is the Studio “功能 → 对话开场白 → 开场白问题” configuration. Generate both from one source because installation paths do not implicitly synchronize them.
 
 ## Design Responsibilities Before Graphs
+
+For Agent-led role delegation and recovery, read [Agent, Prompt, and Tool-Owned State](../xpert-plugin-development/references/agent-prompt-tool-orchestration.md). Align published Prompt workflows with explicit business tools and their acceptance receipts; never assume `disableMessageHistory` resets a compiled graph's middleware closures.
 
 Give every Agent one bounded responsibility. Add a child Agent only when it needs an isolated prompt, context, capability boundary, lifecycle, or reusable runtime entrypoint. Enforce authority with direct graph connections and tool exposure rather than prompts alone.
 

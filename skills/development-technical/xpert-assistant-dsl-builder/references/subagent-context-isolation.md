@@ -63,6 +63,8 @@ Design the delegated task packet independently from the child Agent's message-hi
 
 Set `disableMessageHistory: true` only when the child should start each new invocation round without its own prior-round message list. The runtime still retains messages needed for model and tool steps within the current round, and system prompts, summaries, memories, state variables, or a configured history variable may still provide context. Keep the flag disabled when the child must reason over its own earlier invocation rounds.
 
+This setting does not recreate middleware or clear mutable closure state. Reused External Assistant graphs must not retain a prior task's terminal flag, writable paths or completion instruction. Use task/execution-scoped durable state in business tools and test sequential, interleaved and reconstructed invocations; see [Agent, Prompt, and Tool-Owned State](../../xpert-plugin-development/references/agent-prompt-tool-orchestration.md).
+
 Pass references in the task packet instead of copied histories or full tool outputs.
 
 ### Bind critical task fields with Agent parameters

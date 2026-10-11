@@ -12,6 +12,7 @@ Keep this skill to decisions, pitfalls, and lookup pointers. Inspect current SDK
 - Discover the plugin, platform, and documentation roots; never hardcode machine paths. Upstream plugins: `https://github.com/xpert-ai/xpert-plugins.git`.
 - Read only the references relevant to the task. Source contracts are authoritative; local SDK/tarball success does not establish npm availability or public lockfile reproducibility.
 - Reuse typed domain services and canonical SDK/contracts imports. Keep authorization, validation, idempotency, and revision checks out of surface-only hooks. Use strict schemas and allowlisted DTOs.
+- For Agent-led work, minimize injected procedural instructions. Provide consistent scope, clear tool contracts and live, actionable feedback; let the Agent choose its approach. Read [Agent, Prompt, and Tool-Owned State](references/agent-prompt-tool-orchestration.md) when designing delegation or recovery.
 - Keep metadata, package contents, and runtime registrations aligned. Process-global entities/controllers require `system` or `tenant` level and a stable `artifactNamespace`: `system` installs in the Default tenant, `tenant` in its owning tenant; `organization` is for organization-isolated plugins without global infrastructure.
 - Localize user-facing UI; keep business DTOs language-neutral. Isolate unavoidable compatibility shims and mark them `@deprecated` with the canonical replacement.
 - Treat files over 1,000 lines as a refactoring signal. Investigate oversized TypeScript generics rather than normalizing multi-gigabyte compiler heaps.
@@ -36,6 +37,7 @@ Keep this skill to decisions, pitfalls, and lookup pointers. Inspect current SDK
 | Large or iterative data mutations | [large-data-mutation-workflows.md](references/large-data-mutation-workflows.md) |
 | Model providers | [model-plugins.md](references/model-plugins.md) |
 | Integrations, callbacks, notifications | [integration-middleware.md](references/integration-middleware.md) |
+| Agent-led tool sequencing, reused external graphs, hook/state isolation and task recovery | [agent-prompt-tool-orchestration.md](references/agent-prompt-tool-orchestration.md) |
 | Managed background jobs | [managed-queue.md](references/managed-queue.md) |
 | Keeping an Agent turn alive during queued work | [agent-long-running-tasks.md](references/agent-long-running-tasks.md) |
 | Workspace files and portable references | [workspace-files.md](references/workspace-files.md) |

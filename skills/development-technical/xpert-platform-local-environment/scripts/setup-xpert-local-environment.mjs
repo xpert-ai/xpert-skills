@@ -8,10 +8,12 @@ import {
   openSync,
   readFileSync,
   realpathSync,
+  statSync,
   writeFileSync
 } from 'node:fs'
-import { basename, dirname, join, parse, resolve } from 'node:path'
+import { basename, dirname, join, parse, relative, resolve } from 'node:path'
 import { spawn, spawnSync } from 'node:child_process'
+import { inspectNsjailReadiness } from './inspect-nsjail-readiness.mjs'
 
 const OFFICIAL_REPOSITORY = 'https://github.com/xpert-ai/xpert.git'
 const VALUE_OPTIONS = new Set([
@@ -245,7 +247,8 @@ function freshSecretOverrides() {
 }
 
 function ensureIgnored(platformPath, targetPath) {
-  const relativePath = targetPath.slice(canonicalPath(platformPath).length + 1)
+  // Both paths use the caller's spelling; /var may resolve to /private/var on macOS.
+  const relativePath = relative(resolve(platformPath), resolve(targetPath))
   const result = run('git', ['check-ignore', '-q', '--', relativePath], { cwd: platformPath })
   if (!result.ok) throw new Error(`Refusing to create a local configuration file that is not ignored: ${targetPath}`)
 }
@@ -260,7 +263,7 @@ function writeExclusive(path, content) {
   }
 }
 
-function materializeConfiguration({ platformPath, workspace, pluginPath, mode }) {
+function materializeConfiguration({ platformPath, workspace, pluginPath, mode, stateDir }) {
   const templatePath = join(platformPath, 'docker', 'env.example')
   const sourceEnvPath = join(platformPath, '.env')
   const dockerEnvPath = join(platformPath, 'docker', '.env')
@@ -272,6 +275,17 @@ function materializeConfiguration({ platformPath, workspace, pluginPath, mode })
   const base = readFileSync(existingBasePath || templatePath, 'utf8')
   const commonOverrides = existingBasePath ? new Map() : freshSecretOverrides()
   const sourceOverrides = new Map(commonOverrides)
+  const sandboxVolume = join(platformPath, 'docker', 'volumes', 'api', 'sandbox')
+  const sandboxToken = parseEnv(base).get('NSJAIL_RUNNER_TOKEN') || randomSecret()
+  const sandboxDefaults = new Map([
+    ['NSJAIL_RUNNER_TOKEN', sandboxToken],
+    ['XPERT_NSJAIL_USE_CGROUP_V2', process.platform === 'darwin' ? 'false' : 'true'],
+    ['XPERT_NSJAIL_UID', String(process.getuid?.() ?? 1000)],
+    ['XPERT_NSJAIL_GID', String(process.getgid?.() ?? 1000)]
+  ])
+  for (const [key, value] of sandboxDefaults) sourceOverrides.set(key, parseEnv(base).get(key) || value)
+  sourceOverrides.set('NSJAIL_RUNNER_URL', 'http://127.0.0.1:8090')
+  sourceOverrides.set('SANDBOX_VOLUME', sandboxVolume)
   sourceOverrides.set('NODE_ENV', 'development')
   sourceOverrides.set('PORT', '3000')
   sourceOverrides.set('WEB_PORT', '4200')
@@ -281,8 +295,16 @@ function materializeConfiguration({ platformPath, workspace, pluginPath, mode })
   sourceOverrides.set('CORS_ALLOW_ORIGINS', 'http://localhost:4200')
   sourceOverrides.set('DB_HOST', 'localhost')
   sourceOverrides.set('REDIS_HOST', 'localhost')
+  // Container paths from env.example are not writable host defaults on macOS.
+  sourceOverrides.set('LOG_DIR', join(stateDir, 'logs'))
+  sourceOverrides.set('XPERT_TEMPLATE_DIR', join(stateDir, 'xpert-template'))
+  if (parseEnv(base).get('LOG_FILE_PATH')) {
+    sourceOverrides.set('LOG_FILE_PATH', join(stateDir, 'logs', 'xpert-server.log'))
+  }
   sourceOverrides.set('PLUGIN_WORKSPACE_ROOTS', canonicalPath(pluginPath || workspace))
   const dockerOverrides = new Map(commonOverrides)
+  for (const [key, value] of sandboxDefaults) dockerOverrides.set(key, parseEnv(base).get(key) || value)
+  dockerOverrides.set('NSJAIL_RUNNER_URL', 'http://nsjail-runner:8090')
   dockerOverrides.set('API_BASE_URL', 'http://localhost:3000')
   dockerOverrides.set('CLIENT_BASE_URL', 'http://localhost')
 
@@ -304,6 +326,58 @@ function materializeConfiguration({ platformPath, workspace, pluginPath, mode })
     }
   }
   return changes
+}
+
+function sandboxComposeArgs({ platformPath, mode, stateDir, composeProject }) {
+  const overlay = join(platformPath, '.deploy/nsjail-runner/docker-compose.nsjail.yml')
+  const envPath = join(platformPath, mode === 'source' ? '.env' : 'docker/.env')
+  const env = parseEnv(readFileSync(envPath, 'utf8'))
+  const required = ['NSJAIL_RUNNER_TOKEN', ...(mode === 'source' ? ['NSJAIL_RUNNER_URL', 'SANDBOX_VOLUME'] : [])]
+  const missing = required.filter((key) => !env.get(key))
+  if (missing.length) throw new Error(`Existing configuration needs NsJail keys: ${missing.join(', ')}. Preserve existing values and sandbox data when completing it.`)
+  if (mode === 'source' && env.get('NSJAIL_RUNNER_URL') !== 'http://127.0.0.1:8090') {
+    throw new Error('Local NsJail setup expects NSJAIL_RUNNER_URL=http://127.0.0.1:8090; existing configuration was preserved.')
+  }
+  const volume = mode === 'source' ? env.get('SANDBOX_VOLUME') : join(platformPath, 'docker/volumes/api/sandbox')
+  if (!volume.startsWith('/')) throw new Error('SANDBOX_VOLUME must be an absolute host directory.')
+  mkdirSync(volume, { recursive: true })
+  const owner = statSync(volume)
+  if ((env.get('XPERT_NSJAIL_UID') || '1000') !== String(owner.uid)
+    || (env.get('XPERT_NSJAIL_GID') || '1000') !== String(owner.gid)) {
+    throw new Error('NsJail UID/GID must match the sandbox directory owner; existing permissions were preserved.')
+  }
+  const args = ['compose', '-p', composeProject, '--env-file', envPath]
+  if (mode === 'source') {
+    args.push('-f', join(platformPath, 'docker-compose.yml'), '-f', overlay,
+      '-f', join(platformPath, '.deploy/nsjail-runner/docker-compose.nsjail.dev.yml'))
+  } else {
+    // Compose resolves all relative paths from the first file (docker/ in this mode).
+    const source = readFileSync(overlay, 'utf8')
+    if (!source.includes('context: .\n') || !source.includes('./docker/volumes/api/sandbox/')) {
+      throw new Error('NsJail Compose layout changed; inspect the checkout before adapting Docker-mode paths.')
+    }
+    const adapted = join(stateDir, 'nsjail-compose.yml')
+    writeFileSync(adapted, source.replace('context: .\n', `context: ${JSON.stringify(platformPath)}\n`)
+      .replace('- ./docker/volumes/api/sandbox/:/sandbox/', `- ${JSON.stringify(`${volume}:/sandbox/`)}`), { mode: 0o600 })
+    args.push('-f', join(platformPath, 'docker/docker-compose.yml'), '-f', adapted)
+  }
+  return { args, env }
+}
+
+async function waitForSandbox(sandbox, mode, seconds) {
+  const deadline = Date.now() + seconds * 1000
+  do {
+    if (mode === 'source') {
+      const health = await inspectNsjailReadiness(sandbox.env)
+      if (health.rpcReady) return true
+    } else {
+      const health = run('docker', [...sandbox.args, 'exec', '-T', 'nsjail-runner', 'node', '-e',
+        'fetch("http://127.0.0.1:8090/health",{signal:AbortSignal.timeout(3000),headers:{Authorization:"Bearer "+process.env.XPERT_NSJAIL_RUNNER_TOKEN}}).then(async r=>process.exit(r.ok&&(await r.json()).status==="ok"?0:1)).catch(()=>process.exit(1))'])
+      if (health.ok) return true
+    }
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 1000))
+  } while (Date.now() < deadline)
+  return false
 }
 
 function pluginAllowlisted(sourceEnvPath, pluginPath) {
@@ -479,6 +553,7 @@ function dryRunPlan(options, paths) {
   if (options.mode === 'source' && !options['skip-bootstrap']) steps.push({ action: 'run_repository_bootstrap' })
   if (!options['skip-start']) {
     steps.push({ action: 'start_namespaced_infrastructure', composeProject: paths.composeProject })
+    steps.push({ action: 'start_and_verify_nsjail_runner', provider: 'nsjail' })
     steps.push({ action: options.mode === 'source' ? 'start_source_api_and_cloud' : 'start_full_docker_platform' })
     steps.push({ action: 'verify_api_ui_and_runtime_ownership' })
   }
@@ -595,7 +670,7 @@ try {
     if (typeof packageInfo.scripts[key] !== 'string') throw new Error(`Required platform script is missing: ${key}`)
   }
 
-  const configuration = materializeConfiguration({ platformPath, workspace, pluginPath, mode: options.mode })
+  const configuration = materializeConfiguration({ platformPath, workspace, pluginPath, mode: options.mode, stateDir })
 
   if (options.mode === 'source' && !options['skip-bootstrap']) {
     console.log('Running repository bootstrap')
@@ -603,14 +678,19 @@ try {
     if (!bootstrapped.ok) throw new Error('Repository bootstrap failed.')
   }
 
-  mkdirSync(stateDir, { recursive: true })
+  mkdirSync(stateDir, { recursive: true, mode: 0o700 })
   const processes = {
     api: adoptedApi ? { pid: adoptedApi.pid, adopted: true, log: null } : null,
     cloud: adoptedWeb ? { pid: adoptedWeb.pid, adopted: true, log: null } : null
   }
   let infrastructure = options['skip-start'] ? 'not_started' : 'pending'
+  let sandboxReady = false
 
   if (!options['skip-start']) {
+    if (options.mode === 'source' && portOccupied(8090) && !dockerProjectPublishesPort(composeProject, 8090)) {
+      throw new Error('NsJail port 8090 is owned by another environment.')
+    }
+    const sandbox = sandboxComposeArgs({ platformPath, mode: options.mode, stateDir, composeProject })
     if (options.mode === 'source') {
       const infraOccupied = portOccupied(5432) || portOccupied(6379)
       if (infraOccupied && !options['reuse-infra']) {
@@ -628,6 +708,12 @@ try {
         if (!compose.ok) throw new Error('Infrastructure startup failed.')
         infrastructure = 'started'
       }
+
+      console.log('Starting default NsJail sandbox')
+      const runner = run('docker', [...sandbox.args, 'up', '-d', '--build', '--no-deps', 'nsjail-runner'], { cwd: platformPath, inherit: true })
+      if (!runner.ok) throw new Error('NsJail startup failed.')
+      sandboxReady = await waitForSandbox(sandbox, options.mode, options.waitSeconds)
+      if (!sandboxReady) throw new Error('NsJail authenticated health timed out.')
 
       if (!processes.api) {
         const log = join(stateDir, 'api.log')
@@ -650,12 +736,12 @@ try {
       mkdirSync(join(platformPath, 'docker', 'volumes', 'api', 'public'), { recursive: true })
       mkdirSync(join(platformPath, 'docker', 'volumes', 'api', 'data'), { recursive: true })
       const compose = run('docker', [
-        'compose', '-p', composeProject,
-        '-f', join(platformPath, 'docker', 'docker-compose.yml'),
-        'up', '-d'
+        ...sandbox.args, 'up', '-d', '--build'
       ], { cwd: join(platformPath, 'docker'), inherit: true })
       if (!compose.ok) throw new Error('Full Docker platform startup failed.')
       infrastructure = 'started'
+      sandboxReady = await waitForSandbox(sandbox, options.mode, options.waitSeconds)
+      if (!sandboxReady) throw new Error('NsJail authenticated health timed out.')
     }
   }
 
@@ -688,15 +774,14 @@ try {
   const compatibility = pluginCompatibility(platformPath, pluginPath)
   const hasDeployCommand = typeof packageInfo.scripts['plugin:deploy:local'] === 'string'
   const hasAssistantCommand = typeof packageInfo.scripts['assistant:suite:init'] === 'string'
-  const authReady = credentialsAvailable()
-  const platformReady = Boolean(apiReady && webReady)
+  const authReady = pluginPath ? credentialsAvailable() : false
+  const platformReady = Boolean(apiReady && webReady && sandboxReady)
   const pluginTestReady = Boolean(platformReady && pluginPath && allowlisted && hasDeployCommand && authReady)
   const status = pluginTestReady ? 'plugin_test_ready' : (platformReady ? 'platform_ready' : 'configured')
   const remainingActions = []
   if (pluginPath && allowlisted !== true) remainingActions.push('Add the plugin path to PLUGIN_WORKSPACE_ROOTS without replacing existing configuration.')
   if (pluginPath && !hasDeployCommand) remainingActions.push('Inspect the checked-out platform local plugin deployment contract.')
   if (pluginPath && !authReady) remainingActions.push('Configure local Xpert deployment credentials through the approved credential store.')
-  if (!pluginPath) remainingActions.push('Select a plugin and use xpert-plugin-development for deployment/runtime verification.')
 
   const finalGit = gitInfo(platformPath)
   const receipt = {
@@ -714,6 +799,7 @@ try {
       packageManager: packageInfo.packageManager
     },
     system: toolVersions,
+    sandbox: { provider: 'nsjail', rpcReady: sandboxReady, execution: 'not_checked' },
     configuration,
     compose: {
       project: composeProject,
@@ -724,7 +810,8 @@ try {
       }))
     },
     processes: {
-      ...processes,
+      api: processes.api ? { ...processes.api, listenerPid: finalApiOwner?.pid || null } : null,
+      cloud: processes.cloud ? { ...processes.cloud, listenerPid: finalWebOwner?.pid || null } : null,
       provenance: options.mode === 'source' ? {
         apiOwnedBySelectedCheckout: Boolean(finalApiOwner),
         cloudOwnedBySelectedCheckout: Boolean(finalWebOwner)
@@ -762,7 +849,7 @@ try {
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error)
   try {
-    mkdirSync(stateDir, { recursive: true })
+    mkdirSync(stateDir, { recursive: true, mode: 0o700 })
     writeFileSync(join(stateDir, 'state.json'), `${JSON.stringify({
       schemaVersion: 1,
       generatedAt: new Date().toISOString(),

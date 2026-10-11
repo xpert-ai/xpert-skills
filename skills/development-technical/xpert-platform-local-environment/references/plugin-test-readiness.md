@@ -27,6 +27,7 @@ Full Docker is not local-code-ready merely because the plugin exists on the host
 - the user can authenticate without exposing credentials to Codex output;
 - the target tenant/organization/workspace exists;
 - required model/provider configuration for the intended runtime test is present, or tests are scoped to behavior that does not need it.
+- the agent's selected sandbox provider is configured and reachable, and one scoped command succeeds when workspace tools are required; follow [sandbox-readiness.md](sandbox-readiness.md). Successful onboarding and API readiness do not prove sandbox availability.
 
 ### Test surfaces
 
