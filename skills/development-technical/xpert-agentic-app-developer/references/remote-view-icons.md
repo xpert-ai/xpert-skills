@@ -54,6 +54,8 @@ Treat these measurements as a shared starting grid, not a reason to distort an e
 
 Use the same identity icon for the view manifest, fixed Workbench menu, primary module header, and related empty state when those surfaces represent the same capability.
 
+When delivering an App identity together with marketplace artwork, keep the square Logo and landscape cover as separate assets. Follow the [marketplace card and cover design contract](plugin-application-app-config.md#marketplace-card-and-cover-design) for the 16:9 cover dimensions, crop-safe composition, and overlapping information layer; do not use a square icon export as the cover.
+
 ## Navigation, Action, and Status Icons
 
 For navigation and actions:

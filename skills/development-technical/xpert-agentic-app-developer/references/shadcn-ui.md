@@ -36,6 +36,12 @@ Radix primitives that use `asChild` measure and position from the child element'
 - Validate the trigger's `aria-expanded` or equivalent state, the content's visible state, and the overlay's bounding box inside the current iframe viewport. A DOM match or `isVisible()` alone is insufficient because an offscreen portaled element may satisfy both.
 - Capture at least one screenshot with the overlay open when its position or visual hierarchy is part of acceptance.
 
+## Tab Data Lifetime
+
+- Lazily load each read-only catalog once per Dialog session and reuse its data on Tab changes, including empty results. Reuse in-flight requests and keep late responses assigned to their original Tab. Refresh explicitly; an older response must not overwrite refreshed or locally updated data.
+- Preserve visited panels whose component state owns loaded data or workspace selection. With Radix `forceMount`, explicitly hide inactive panels so their contents cannot appear or receive keyboard focus. Returning from a detail view alone must not reload unchanged catalog data.
+- Invalidate affected lists after successful installation or other mutations. End the cache at Dialog close and account/tenant/organization/context changes; keep action authorization and setup preflight on their authoritative server paths. Keep this cache in memory, without credentials or Web Storage.
+
 ## Default Extension View Baseline
 
 When the task does not specify another visual system, React Extension Views and Workbench Remote Views use shadcn UI, Tailwind CSS, the Xpert host theme installer, and a bounded Studio layout by default.
