@@ -143,3 +143,9 @@ For Agent-orchestrated jobs, also expose the professional Agent role, attempt nu
 8. Ensure handlers can run without an HTTP request and revalidate scope plus revision from persisted state.
 9. For Assistant Task jobs, persist platform execution handles separately, reconcile nonterminal runs, and require domain finalization before success.
 10. Drain old physical queues before production rollout; do not add compatibility consumers unless explicitly requested.
+
+## Published MCP Execution Context
+
+Queue only server-validated execution identity and configuration. In host-native MCP work, retain the original principal and host-bound output file scope; do not reconstruct them from a later HTTP request or a default Assistant. Input file references and output ownership serve different purposes; see [workspace-files.md](workspace-files.md).
+
+Before execution, let the host recheck publication availability, capability policy, membership and configuration. A queued call accepted under direct execution must not pass a newly required confirmation without server-recorded approval. Do not trust an `approvalGranted` tool argument. Reject or use the supported reauthorization path when policy or file binding changes. Preserve job identity across retries and avoid silently replaying possibly completed writes.

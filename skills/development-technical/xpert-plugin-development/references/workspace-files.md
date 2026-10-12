@@ -442,3 +442,9 @@ If platform runtime code changed, also run the focused platform tests for worksp
 6. Sending a delayed file without validating that `size` and `sha256` still match.
 7. Guessing Docker bind mount paths inside plugin code.
 8. Treating `filePath` aliases from tool input as process-cwd-relative paths.
+
+## Standalone MCP File Transfer
+
+For host-native MCP publications, distinguish external client paths from server paths. Use the host's authenticated binary transport for upload/download and pass portable file references through MCP. Verify the deployed host supports the endpoint, publication file binding and credential scopes; do not assume every MCP server implements Xpert's transport. Discover current limits rather than copying one plugin's limit.
+
+A delayed job's input reference identifies an existing file, but does not by itself authorize a new output destination. When supported, retain the host-bound `WorkspaceFilesApi.scope` with the original execution identity and revalidate it before writing. Do not infer an output volume from a plugin business project ID or a missing Assistant. Reject a missing or foreign binding. See [host-native-mcp.md](host-native-mcp-capabilities.md) for the standalone workflow.
