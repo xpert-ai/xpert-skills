@@ -1,0 +1,4 @@
+interface:
+  display_name: "XpertAI SDK Integration"
+  short_description: "Use the SDK without platform plugins or ChatKit"
+  default_prompt: "Use $xpert-sdk-integration to integrate my standalone application with XpertAI through its SDK using the current official documentation."
