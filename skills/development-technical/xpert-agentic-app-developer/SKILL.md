@@ -34,7 +34,7 @@ Treat 1,000 lines as an architecture-review threshold for maintained source file
 9. Persist reviewable business data with evidence, confidence, status, and failure state.
 10. Add a Workbench or extension view for human review and operational actions. For Assistant Profile tabs and contextual decisions, read [references/assistant-profile-views.md](references/assistant-profile-views.md).
 11. When the app publishes previews or share links, read [references/artifact-share-links.md](references/artifact-share-links.md) and use the platform Artifacts and Workspace Files capabilities.
-12. Provide an Assistant template for first-time installation and subsequent in-place upgrades. Before installing, upgrading, or provisioning a versioned role/Orchestrator acceptance suite, read [references/assistant-template-lifecycle.md](references/assistant-template-lifecycle.md); update an existing instance through `Assistant Settings` -> `Update from Template` instead of creating a duplicate from the wizard.
+12. Provide an Assistant template for first-time installation and subsequent in-place upgrades. Before installing, upgrading, or provisioning a versioned role/Orchestrator acceptance suite, read [references/assistant-template-lifecycle.md](references/assistant-template-lifecycle.md); prefer the supported suite CLI for batch updates, or `Assistant Settings` -> `Update from Template` for an individual UI update, preserving installed identity.
 13. Build and register the plugin from an independent plugin repository.
 14. Validate with unit, integration, manifest, and end-to-end tests.
 
@@ -426,7 +426,7 @@ Contribute an Assistant template so users do not manually assemble middleware, p
 
 For template DSL construction, use `xpert-assistant-dsl-builder` and its [Primary Agent Middleware Defaults](../xpert-assistant-dsl-builder/references/primary-agent-middleware-defaults.md). Every independent Assistant's primary Agent gets todo management and one context-management strategy by default; compose this shared baseline with each role's own domain middleware. Preserve explicit compatible settings, apply conditional capabilities only when needed, and keep defaults in one generator rather than separate role-specific copies.
 
-Treat template installation and template upgrade as different lifecycle operations. Read [references/assistant-template-lifecycle.md](references/assistant-template-lifecycle.md) before acting. For an existing digital expert, open its canvas, use `Assistant Settings` -> `Update from Template`, review the graph changes, then save and publish the same Xpert. Do not use the creation wizard or manually redraw the graph as an upgrade mechanism.
+Treat template installation and template upgrade as different lifecycle operations. Read [references/assistant-template-lifecycle.md](references/assistant-template-lifecycle.md) before acting. For an existing suite, prefer `assistant:suite:init --refresh` with its installation receipt; for an individual UI update, use `Assistant Settings` -> `Update from Template`. Review graph changes and publish the same instances while preserving their models, environments, and resource bindings.
 
 When an App declares `appConfig`, its `assistantTemplateKey` must match exactly one raw `templates[].key` from the same loaded plugin. The host uses that link for first-time organization initialization and repair; it does not infer the link from names and does not automatically upgrade an already healthy installed Assistant when plugin metadata changes. Follow [Plugin Application `appConfig`](references/plugin-application-app-config.md) for the declaration and [references/assistant-template-lifecycle.md](references/assistant-template-lifecycle.md) for later in-place upgrades.
 
@@ -450,6 +450,7 @@ corepack pnpm install
 cd <platform-root>
 corepack pnpm plugin:deploy:local \
   --plugin-dir <plugin-repo-root>/acme/contract-review \
+  --api-url "$XPERT_API_URL" \
   --scope tenant \
   --tenant-id "$XPERT_TENANT_ID" \
   --manifest-file <temporary-output>/plugin-deployment.json
@@ -460,22 +461,11 @@ Use `plugin:deploy:local` as the default local lifecycle command when the platfo
 Deployment invariants:
 
 - Choose installation scope from `meta.level`: `system` and `tenant` plugins use tenant scope (`system` only in the Default tenant); `organization` plugins use organization scope. Do not infer scope from an available ID or staging path.
-- `staged successfully` or `restartRequired: true` means the plugin was registered or copied, not that it is running. Restart the API, then verify the target plugin registered, bootstrapped, and works at runtime.
+- `staged successfully`, `restartRequired: true`, or descriptor `loadStatus: pending_restart` requires runtime verification. Restart the selected API when required, then verify descriptor `currentVersion`, loaded status, and an observable runtime capability.
 - Plugin deployment and Assistant initialization are separate lifecycles. Deploy the plugin first. For an `appConfig` App, use the host-governed Explore setup flow to create the first scoped Workspace, Knowledge bases, and published Assistant; for a plugin without `appConfig`, provision the Assistant through its normal template flow. Upgrade an existing Assistant in place through the template lifecycle rather than treating either setup path as automatic upgrade.
 - Run the full build and test tier once per unchanged source. A later deployment in the same task may use `--skip-build --skip-test`; declared `verify:dist` still protects generated assets.
 
-For a plugin that contributes several role Assistants plus an Orchestrator, use a versioned suite profile after the plugin is running:
-
-```bash
-corepack pnpm assistant:suite:init \
-  --profile <assistant-suite.json> \
-  --workspace-id "$XPERT_WORKSPACE_ID" \
-  --org-id "$XPERT_ORG_ID" \
-  --run-id acceptance-01 \
-  --manifest-file <temporary-output>/assistant-suite.json
-```
-
-The initializer must default to new instances, pass `null` when no publish environment exists, and verify direct External Xpert connections with `required: true`. Use `--resume` only for an inspected partial run with matching template provenance.
+For multi-Assistant releases, follow [the suite release workflow](../xpert-plugin-development/references/local-release-and-assistant-suite.md). Include all roles and nested dependencies, update existing instances with `--refresh --installation-file`, and recover interrupted releases with `--resume --manifest-file`. Preserve existing models and environments; publish children before callers and verify all published bindings. Suite publication is separate from business execution acceptance.
 
 Prefer username/password login for local deployment. Configure the current OS user's Xpert username and that Xpert account's password as separate macOS Keychain items:
 
@@ -543,11 +533,11 @@ Before finishing, verify:
 - Remote component table views use scalar query parameters, remote pagination, per-tab filters, and total/page/pageSize metadata instead of fetching all rows into the iframe.
 - Source and test code do not use broad type escape hatches (`as any`, `as unknown as`, `: any`, `: unknown`) except for a deliberately isolated compatibility helper; concrete library, SDK, bridge, and mock types are used instead.
 - User-visible text uses the shared typed i18n facade; maintained components contain no inline locale-to-text branches, catalogs pass key/parameter completeness checks, and locale/platform/third-party mappings stay in explicit adapter boundaries.
-- Assistant template includes required plugins/capabilities and practical starter prompts; upgrading an installed Assistant uses `Assistant Settings` -> `Update from Template`, preserves the existing Xpert id/slug and operational bindings, and does not create a wizard-based duplicate unless the user explicitly requests a separate instance; Project-scoped apps use a distinct persisted `workspaceProjectId`, declare the intended `workspaceScope` policy, and bind Primary and subagent conversations, files, FileAssets, and runs to that same trusted Project.
+- Assistant template includes required plugins/capabilities and practical starter prompts; upgrading installed Assistants uses the supported suite refresh CLI or `Assistant Settings` -> `Update from Template`, preserves Xpert ids/slugs and operational bindings, and creates a separate instance only when requested; Project-scoped apps use a distinct persisted `workspaceProjectId`, declare the intended `workspaceScope` policy, and bind Primary and subagent conversations, files, FileAssets, and runs to that same trusted Project.
 - Tests cover service behavior, middleware tool calls, manifest/view actions, remote component bridge behavior, and end-to-end user flow.
 - Interactive Remote View prototypes follow the prototype-as-production standard: one maintained TSX/shadcn/Tailwind implementation and one generated asset set serve preview and production; only the typed Preview Fixture versus real View Provider adapter changes, with no credentials, production data, disposable native HTML/CSS source, or preview-specific business-component branch.
 - Substantive Workbench UI changes follow the E2E and visual-validation reference: real built assets, semantic UI and host-state assertions, deterministic screenshot evidence when visual behavior matters, and installed-platform validation for platform-dependent integrations.
 - Installed-platform browser validation follows the layered interaction reference when Shadow DOM, iframe, controlled-input, or locator boundaries are present; it preserves host context, avoids sensitive standalone iframe URLs, and verifies every action by observable state.
 - Local deployment uses `plugin:deploy:local`, preserves credentials outside logs and repositories, and verifies the loaded plugin descriptor.
-- Repeated multi-Assistant acceptance uses a versioned suite profile, create-only run IDs, required External Xpert connections, and secret-free deployment/provisioning receipts; it does not overwrite an existing production Assistant.
+- Multi-Assistant releases use a portable profile covering all roles, exact installation receipts for updates, dependency-ordered publication, and resumable release receipts; creation, refresh, and recovery remain distinct operations.
 - Optional MCP surfaces, when explicitly requested, are validated separately with the dedicated plugin development MCP checklist.

@@ -26,6 +26,7 @@ Full Docker is not local-code-ready merely because the plugin exists on the host
 - the platform has completed first-user/organization initialization;
 - the user can authenticate without exposing credentials to Codex output;
 - the target tenant/organization/workspace exists;
+- the target workspace is authorable with explicit organization context; login alone is insufficient. Follow [the authentication/context procedure](../../xpert-plugin-development/references/general.md#authentication-and-organization-context) before treating a `403` or missing workspace as an authorization failure;
 - required model/provider configuration for the intended runtime test is present, or tests are scoped to behavior that does not need it.
 - the agent's selected sandbox provider is configured and reachable, and one scoped command succeeds when workspace tools are required; follow [sandbox-readiness.md](sandbox-readiness.md). Successful onboarding and API readiness do not prove sandbox availability.
 
@@ -53,7 +54,7 @@ Once the gates pass:
 5. restart the selected API only when required;
 6. repeat environment provenance and health checks after restart;
 7. invoke an observable runtime surface;
-8. provision/publish Assistants only after the plugin is running.
+8. create or update/publish Assistants only after the plugin is running, using [the suite release workflow](../../xpert-plugin-development/references/local-release-and-assistant-suite.md) for batch refresh and recovery.
 
 For an installed Workbench runtime check after restart, reload or reopen the signed-in top-level host route and wait for its View tab and iframe initialization to remount. Do not validate through a standalone iframe URL or a detached pre-restart document. This proves only the selected observable plugin surface; broader application acceptance still belongs to the application/pipeline skill.
 

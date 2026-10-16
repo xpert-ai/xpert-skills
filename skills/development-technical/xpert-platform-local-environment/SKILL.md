@@ -42,8 +42,12 @@ node <skill-dir>/scripts/inspect-xpert-local-environment.mjs \
   --platform <xpert-root> \
   --mode source \
   --plugin-dir <plugin-root> \
+  --api-url "$XPERT_READINESS_URL" \
+  --web-url "$XPERT_WEB_URL" \
   --strict
 ```
+
+Derive these URLs from the selected environment. The inspector's `--api-url` is the full readiness endpoint, such as `http://localhost:<api-port>/api/health/ready`; deployment/suite CLIs instead take the API origin. The inspector defaults to ports 3000/4200 and does not infer custom ports from `.env`, so pass overrides for an existing environment with different ports.
 
 Do not accept a healthy port as evidence that the selected checkout is running. In source mode, the listening API and Cloud processes must resolve to the selected checkout. In Docker mode, the containers must belong to the selected Compose project.
 
@@ -74,7 +78,7 @@ The command may clone the official public Xpert repository when the exact target
 
 ### 3. Respect Human and Security Gates
 
-Pause with a specific action when any of these is required:
+Pause with a specific action when any of these remains unresolved or unauthorized:
 
 - repository authentication or a non-public fork;
 - a branch/ref choice that would change an existing checkout;
@@ -86,6 +90,8 @@ Pause with a specific action when any of these is required:
 Never ask the user to paste passwords or tokens into chat. Never inspect browser storage, cookies, shell history, or unrelated process environments. Prefer the credential mechanism defined by `xpert-plugin-development` after platform readiness.
 
 A request to set up the system through creation of a super administrator authorizes that initialization. Follow the linked initialization procedure without asking for the same permission again; pause only for a separate unresolved gate.
+
+Likewise, an explicit choice to switch local services to another checkout authorizes stopping the identified API/UI and starting the selected checkout. Preserve unrelated processes, configuration, and shared infrastructure; follow [the checkout-switch procedure](references/setup-and-lifecycle.md#switching-the-active-source-checkout) without asking for the same choice again.
 
 ### 4. Prove Plugin-Test Readiness
 
@@ -106,7 +112,7 @@ Only then hand off to `xpert-plugin-development`. Plugin `built`, `staged`, `run
 
 - Re-run the inspector before changing a failed environment.
 - Preserve user-owned `.env`, volumes, databases, repositories, logs, and running instances.
-- Do not automatically stop, kill, delete, reset, pull, or switch anything to resolve a collision.
+- Do not resolve collisions by stopping another instance or switching checkouts without existing authorization; never delete/reset user data as a repair shortcut.
 - Prefer a targeted restart of the selected API/UI or namespaced Compose project after the cause is known.
 - After repair, repeat provenance and health checks; do not rely only on the absence of errors.
 

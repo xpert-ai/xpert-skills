@@ -22,7 +22,8 @@ Keep this skill to decisions, pitfalls, and lookup pointers. Inspect current SDK
 
 - For local deployment, prove the selected platform is ready; use `xpert-platform-local-environment` if identity or health is uncertain. Prefer `plugin:deploy:local` at the plugin-declared scope.
 - Build generated assets before browser acceptance; check freshness with `verify:dist` and inspect the actual package. Run relevant contract tests and dist-first lifecycle loading.
-- Staged is not running: honor `restartRequired` and verify a live capability. Plugin deployment does not initialize/publish Assistant templates; that is a separate lifecycle.
+- Staged is not running: honor `restartRequired` and descriptor `pending_restart`, then verify a live capability. Plugin deployment does not initialize/publish Assistant templates; that is a separate lifecycle.
+- For suite updates, prefer `assistant:suite:init --refresh` with the prior installation receipt; use `--resume` for interrupted releases. Read [the release workflow](references/local-release-and-assistant-suite.md) for all-role dependency ordering, binding preservation, and activation recovery.
 - Use configured login/secret-store credentials. Never recover browser credentials, log secrets, or place them in repository files. If credentials are missing, stop before deployment and follow `references/general.md`.
 - Match actions to the request: documentation/review work does not require deployment. Report actual verification and remaining limits; do not imply authorization for publishing or unrelated runtime changes.
 
@@ -45,7 +46,7 @@ Keep this skill to decisions, pitfalls, and lookup pointers. Inspect current SDK
 | Managed Artifacts | [artifacts.md](references/artifacts.md) |
 | Yjs/CRDT collaboration | [collaboration.md](references/collaboration.md) |
 | Skill-only plugins | [skill-only-plugins.md](references/skill-only-plugins.md) |
-| Assistant suite initialization and publication | [local-release-and-assistant-suite.md](references/local-release-and-assistant-suite.md) |
+| Assistant suite creation, batch update, publication, and failure recovery | [local-release-and-assistant-suite.md](references/local-release-and-assistant-suite.md) |
 | Building Assistant template DSLs and default middleware composition | [Primary Agent Middleware Defaults](../xpert-assistant-dsl-builder/references/primary-agent-middleware-defaults.md), using `xpert-assistant-dsl-builder` |
 
 ## Assistant Profile integration

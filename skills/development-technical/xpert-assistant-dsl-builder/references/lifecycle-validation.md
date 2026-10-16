@@ -90,20 +90,11 @@ Refreshing a reusable template never rewrites an installed Assistant automatical
 
 ## Versioned Suite Provisioning
 
-When acceptance requires multiple role Assistants and an Orchestrator, use a versioned suite profile instead of repeating ad hoc UI installation steps. The reusable profile may contain plugin name/version, template keys, stable primary Agent keys, base names/titles, and the Orchestrator role list. It must not contain tenant, organization, workspace, environment, credential, or installed Assistant identifiers.
+For multiple Assistants, use the platform `assistant:suite:init` command and follow [Plugin release and Assistant suite updates](../../xpert-plugin-development/references/local-release-and-assistant-suite.md) for commands and receipt handling. The portable profile lists every role, stable template/primary Agent identity, and each caller's `externalRoleKeys`; it contains no deployed resource or scope identifiers.
 
-Use the platform `assistant:suite:init` command when available. The provisioning sequence must:
+Choose creation for a new suite, `--refresh --installation-file` for existing instances, or `--resume --manifest-file` for interrupted work. Preflight every template and target, prepare all drafts, then publish roles in dependency order and the orchestrator last. Each declared dependency becomes a direct `required: true` External Xpert connection from its caller; a specialist need not be directly connected to the orchestrator.
 
-1. Verify the loaded plugin and every exact template before any Assistant mutation.
-2. Install independent role Assistants first; they may run concurrently after preflight.
-3. Install the Orchestrator as a draft.
-4. Add each role as an External Xpert directly from the Orchestrator primary Agent.
-5. Set every External Xpert connection to `required: true`; optional connections are not loaded by default at runtime.
-6. Save, publish, re-fetch, and verify exactly one required direct connection for each role.
-7. Send `environmentId: null` when no default or explicit environment exists; never synthesize an empty UUID.
-8. Write a secret-free receipt with installed template, Agent, published version, scope, and connection counts.
-
-Default to a fresh unique `run-id` and fail on name collisions. `--resume` may recover only the exact batch after official template provenance and primary Agent identity match. Do not silently overwrite or adopt an unrelated Assistant.
+Omitting `--environment-id` preserves existing environments. A supplied value overrides only the orchestrator, and new instances without one use `null`. Re-fetch published graphs and bindings before marking the receipt ready for testing. Do not create replacement instances merely to update templates or recover a failed release.
 
 ## Instance-Owned Bindings
 
@@ -121,6 +112,8 @@ After importing or creating an organization-owned Assistant:
 
 Do not weaken tenant or organization scoping to make a nested Agent find resources. Correct the binding or propagation contract instead.
 
+For template updates, preserve installed Assistant/Agent models (including explicit null inheritance), provider-schema model fields in middleware, environments, and tool/knowledge bindings. Resolve tools by exact IDs or explicit provider/component identity, never display names. A missing or ambiguous match must fail before saving; do not delete tools or substitute models to bypass publication errors. Request model relations explicitly when verifying APIs that omit them by default.
+
 ## Publication
 
 Draft update and publication are separate changes.
@@ -137,7 +130,7 @@ Do not claim runtime readiness from the draft alone. An existing published Assis
 
 Keep plugin package version, template key, DSL `team.version`, suite-profile version, installed published version, and business flow-template version distinct in logs and acceptance reports.
 
-If publication fails, preserve the draft and error details. Do not repeatedly mutate the graph without first identifying which contract failed.
+If publication fails before commit, preserve the draft and prior version while diagnosing the failure. `XPERT_PUBLICATION_ACTIVATION_PENDING` instead means the version committed but trigger/event activation remains pending. Resume the existing release; the supported `POST /api/xpert/:id/publication/resume` endpoint requires the expected committed version and authoring permission. Do not publish a second version as a retry. See the linked release workflow for changed-draft and lost-response recovery boundaries.
 
 ## Runtime Acceptance
 

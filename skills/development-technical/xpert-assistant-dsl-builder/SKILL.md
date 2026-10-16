@@ -23,7 +23,7 @@ For Agent-led Assistants, keep prompts focused on role, authority and output req
 | Studio 功能, opener questions, suggestion, speech, upload | [features-and-ui-mapping.md](references/features-and-ui-mapping.md) |
 | Plugin template metadata and cross-layer generation | [template-contribution.md](references/template-contribution.md) |
 | Child Agent isolation and task/result contracts | [subagent-context-isolation.md](references/subagent-context-isolation.md) |
-| Import, multi-Assistant suite provisioning, publish, and runtime verification | [lifecycle-validation.md](references/lifecycle-validation.md) |
+| Import, suite creation/update, publication recovery, and runtime verification | [lifecycle-validation.md](references/lifecycle-validation.md) |
 
 Use [examples/minimal-agent.yaml](examples/minimal-agent.yaml) for a minimal graph with primary-Agent defaults and [examples/full-featured-assistant.yaml](examples/full-featured-assistant.yaml) for property placement. Examples demonstrate shape; current host contracts remain authoritative.
 

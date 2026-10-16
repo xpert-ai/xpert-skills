@@ -113,7 +113,7 @@ Do not claim an arbitrary host plugin `workspacePath` can be loaded in Docker mo
 
 ## Port and Ownership Rules
 
-Default ports are discovered from current configuration and scripts; common source defaults are API `3000` and Cloud `4200`, while full Docker commonly publishes API `3000` and web `80`.
+Discover intended ports from the selected configuration, scripts, and existing service receipt. The inspector itself defaults to API `3000` and Cloud `4200` (web `80` in Docker mode), so supply `--api-url` and `--web-url` when those defaults differ. For the environment scripts, `--api-url` is the full readiness endpoint, usually ending in `/api/health/ready`; for `plugin:deploy:local` and `assistant:suite:init` it is the API origin. Reusing the wrong URL shape can test an unrelated page or fail against a healthy API.
 
 Before starting:
 
@@ -125,11 +125,22 @@ Before starting:
 
 Infrastructure ports may be reused only after the user or existing environment contract explicitly permits reuse. Reusing a healthy Postgres/Redis listener does not guarantee database or tenant isolation; record the decision.
 
+### Switching the active source checkout
+
+When the user selects a different checkout for the existing local service ports:
+
+1. Record the old API/UI listener and launcher PIDs, checkout, endpoints, and log paths; identify unrelated processes that must remain running.
+2. Inspect the selected checkout's configuration and startup scripts. Reuse shared database/Redis only within existing authorization; preserve the database schema-management mode. If the existing environment uses `DB_SCHEMA_SYNC_MODE=external`, do not accidentally enable schema synchronization through the new checkout's default. Verify this setting against current host source.
+3. Stop only the identified old API/UI process trees, then start the selected checkout through its repository scripts. Use process-scoped overrides for the authorized launch where needed; preserve existing `.env` files and do not copy or print secrets.
+4. Wait for the selected readiness/UI URLs, prove the new listeners' checkout provenance, and update the protected receipt. A healthy service on a familiar port is insufficient.
+
+The setup helper intentionally does not stop another checkout automatically. An authorized switch can be performed as these targeted lifecycle steps; do not keep rerunning setup against a known port collision or ask for an already supplied choice again. If dependency or migration differences remain unresolved, diagnose them before starting the replacement API.
+
 ## Recovery Matrix
 
 | Symptom | Diagnose first | Safe response |
 |---|---|---|
-| API port healthy but wrong checkout | listener PID, command, cwd | Stop and ask whether to use that checkout, stop it, or choose another port. |
+| API port healthy but wrong checkout | listener PID, command, cwd | Follow an already authorized checkout switch; otherwise ask which checkout/ports to use. |
 | Compose shows another repository's services | project label and working-directory label | Use an explicit unique project name; do not operate on the other project. |
 | API ready, UI unavailable | Cloud process/log, UI port, API proxy config | Restart only the selected Cloud process after fixing the cause. |
 | Plugin deploy requests restart | deployment receipt and API log | Restart the selected API, recheck provenance/health, then verify runtime. |

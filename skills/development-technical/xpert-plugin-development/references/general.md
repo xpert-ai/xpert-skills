@@ -225,6 +225,7 @@ Prefer the platform-owned deployment command when `<platform-root>/package.json`
 cd <platform-root>
 corepack pnpm plugin:deploy:local \
   --plugin-dir <plugin-repo-root>/<plugin-relative-path> \
+  --api-url "$XPERT_API_URL" \
   --scope tenant \
   --tenant-id "$XPERT_TENANT_ID" \
   --manifest-file <temporary-output>/plugin-deployment.json
@@ -232,6 +233,7 @@ corepack pnpm plugin:deploy:local \
 # meta.level is organization
 corepack pnpm plugin:deploy:local \
   --plugin-dir <plugin-repo-root>/<plugin-relative-path> \
+  --api-url "$XPERT_API_URL" \
   --scope organization \
   --org-id "$XPERT_ORG_ID" \
   --manifest-file <temporary-output>/plugin-deployment.json
@@ -280,9 +282,19 @@ Keep these checkpoints distinct:
 3. **Running:** the API restarted when required and the plugin bootstrapped successfully; an observable provider, View, route, or tool call works.
 4. **Assistant initialized and published:** a new Assistant was provisioned or an existing one was updated from the template, then saved, published, and tested.
 
-`staged successfully`, descriptor visibility, and `restartRequired: true` do not prove runtime loading. Plugin deployment also does not initialize or publish an Assistant. Verify the plugin runtime first, then perform the Assistant lifecycle separately; update an existing Assistant in place unless the user explicitly requests another instance.
+`staged successfully`, descriptor visibility, and `restartRequired: true` do not prove runtime loading. Inspect descriptor `currentVersion` (or `version` on older hosts) and `loadStatus`; `pending_restart` also requires restart even when the mutation response omitted the flag. Verify the expected version is loaded and a runtime surface works after restarting the selected API. Plugin deployment does not initialize or publish an Assistant; update an existing Assistant in place unless the user requests another instance.
 
-For a deliberately new multi-Assistant acceptance batch, follow [local-release-and-assistant-suite.md](local-release-and-assistant-suite.md). Use a versioned profile and `assistant:suite:init` rather than manually repeating role installation, Orchestrator binding, and publication.
+For multi-Assistant creation, existing-suite updates, and failure recovery, follow [local-release-and-assistant-suite.md](local-release-and-assistant-suite.md). Use a versioned profile and `assistant:suite:init`: create for first installation, `--refresh` for updates, and `--resume` for an interrupted release. Keep all roles in the profile, including specialists with dependencies on other roles.
+
+## Authentication and organization context
+
+Successful login proves identity, not that subsequent requests selected the target organization. If a workspace returns `403` or `/api/xpert-workspace/my?purpose=author` omits it, check request scope before concluding that access or credentials are invalid.
+
+For API automation, reuse `requireAuthentication` and `createRequestHeaders` from the selected platform's `tools/scripts/local-plugin-cli.mjs`. Derive organization identifiers from trusted task context or authorized API results. When unknown, read only necessary organization fields with `GET /api/organization?data=<URL-encoded JSON>`, initially `{ "select": ["id"], "take": 100 }`; handle pagination according to the current controller contract. Query authorable workspaces within each relevant authorized organization to locate the intended target.
+
+Build organization requests with `createRequestHeaders({ scope: 'organization', orgId }, token, tenantId)`. This sets `organization-id`, `tenant-id`, and `x-scope-level: organization`. Keep this scope consistent for Assistant reads, template synchronization, publication, and View APIs. Construct separate tenant headers when installing a system/tenant plugin. Do not reuse plugin-installation headers for organization authoring.
+
+Retain the verified organization/workspace mapping only in a protected local operational receipt. If access is still denied under the correct scope, report that actual authorization failure; do not change permissions, select an unrelated organization, or write directly to the database to bypass it.
 
 ## Authentication and missing-credentials procedure
 

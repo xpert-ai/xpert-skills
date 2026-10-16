@@ -136,7 +136,9 @@ Never collapse these states into "deployed":
 
 For a default hybrid pipeline, acceptance is not passed until the Cases Workbench, Assistant execution, backend transition, and their shared persisted projection have been exercised together. If the user waived the Workbench, record the waiver in the receipt.
 
-For a multi-Assistant suite, provision independent role Assistants before the independent Orchestrator Assistant. Use a versioned suite profile, exactly one direct `required: true` External Xpert per orchestrated role, stable template/Agent identities, and a secret-free receipt. Preserve user-owned models, environments, credentials, knowledge, and scope unless replacement is explicitly authorized.
+For a multi-Assistant suite, follow [the suite release workflow](../../xpert-plugin-development/references/local-release-and-assistant-suite.md). Include all roles and nested dependencies in the profile, prepare all drafts, publish roles in dependency order, then publish the orchestrator. Each caller has exactly one direct `required: true` External Xpert connection per declared child. Update installed instances with `--refresh` and exact installation receipts; recover interrupted releases with `--resume` without republishing completed roles. Preserve user-owned models, environments, tools, credentials, knowledge, and scope unless replacement is authorized.
+
+For a deployment-only task, distinguish structural publication checks and a bounded runtime smoke test from the full product acceptance scenarios above. Report which layers were exercised; do not claim full pipeline acceptance from a loaded plugin or `readyForTesting` receipt.
 
 ## Receipts
 

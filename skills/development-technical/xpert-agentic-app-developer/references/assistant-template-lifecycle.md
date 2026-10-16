@@ -1,53 +1,51 @@
 # Assistant Template Lifecycle
 
-Use the plugin-owned Assistant template for both initial installation and later upgrades. Treat these as two different operations.
+Use the plugin-owned template for first installation and later upgrades. Keep plugin loading, draft synchronization, publication, and runtime acceptance separate.
 
 ## Initial Installation
 
-Create an Assistant from the plugin template only when no installed Assistant exists, or when the user explicitly requests a separate parallel instance. The creation flow establishes the Xpert identity, template provenance, graph, middleware, skills, model settings, starter prompts, and required plugin dependencies.
+Create an Assistant when none is installed, or when the user requests a separate instance. For an `appConfig` App, use the host-governed Explore setup flow when creating its scoped Workspace, Knowledge bases, and Assistant. A suite release does not replace those application resource setup steps.
 
-## Versioned Acceptance Suite
+## Batch Updates Through The CLI
 
-When an Agentic App ships several role Assistants plus an Orchestrator, define their reusable topology in a versioned `xpert-assistant-suite@1` profile and use the platform `assistant:suite:init` command when available. Keep scope IDs and installed Assistant IDs out of the profile.
+For a plugin that ships several Assistants, prefer the platform `assistant:suite:init` command and a portable `xpert-assistant-suite@1` profile. Follow [Plugin release and Assistant suite updates](../../xpert-plugin-development/references/local-release-and-assistant-suite.md) for executable create, refresh, and resume commands.
 
-The initializer must preflight the loaded plugin and every template, install role Assistants before the Orchestrator, connect every role directly from the Orchestrator primary Agent as an External Xpert with `required: true`, publish, re-fetch, and verify the graph. Missing environment means `environmentId: null`, never an empty UUID.
+- Include every role, including standalone Assistants and specialists not directly connected to the main Assistant. Declare each caller's `externalRoleKeys` as a dependency DAG.
+- Use `--refresh --installation-file` to update exact installed Assistant IDs, with a new `--manifest-file`. A previous completed release receipt can serve as the installation receipt. Without one, use the exact original run ID and verified template provenance; do not infer identity from display names.
+- Use creation only for first installation or a requested separate suite. Use `--resume` with the same release receipt after an interruption.
+- Preflight all templates and targets, synchronize all drafts, then publish children before callers and the orchestrator last. Rebind each caller to the current published child with a direct `required: true` connection.
+- Preserve installed models, schema-declared middleware model fields, tools, knowledge bindings, and environments. Tool matching must use stable identity; missing/ambiguous bindings fail before draft persistence.
+- Omitted `--environment-id` preserves each existing environment. An explicit value overrides only the orchestrator; new instances without one use `null`.
+- Re-fetch published graphs and bindings. Keep deployment and release receipts outside source control; scope and installed IDs belong only in protected operational records.
 
-Use a unique `run-id` and create-only behavior for normal acceptance. Permit explicit resume only for the exact partial run after template provenance and primary Agent identity match. Store the secret-free installation receipt outside source control and use it together with the plugin deployment manifest as acceptance evidence.
+Before running the CLI, verify that the selected host exposes the current refresh/resume contract. Its local `--dry-run` does not perform network authorization or runtime checks.
 
-## Upgrade an Existing Assistant
+## Single-Assistant UI Update
 
-Do not open the Assistant creation wizard or create a replacement Assistant when an installed Assistant already exists.
+When updating one Assistant interactively or using a host without the batch CLI:
 
-Upgrade the existing instance through the digital expert canvas:
+1. Deploy/refresh the plugin and verify the intended template is actually loaded.
+2. Open the existing digital expert canvas.
+3. Choose `Assistant Settings` -> `Update from Template`.
+4. Review graph changes and the impact on intentional local customizations; preserve instance-owned resource/model/environment bindings.
+5. Save and publish the same Assistant.
+6. Verify its original identity, slug, conversations, Project bindings, permissions, and integrations remain attached.
+7. Run a bounded installed-platform smoke test appropriate to the task.
 
-1. Deploy or refresh the plugin so the latest Assistant template is available to the platform.
-2. Open the existing digital expert/Xpert and enter its canvas.
-3. Open `Assistant Settings` from the canvas toolbar.
-4. In the Assistant base-properties panel, choose `Update from Template`.
-5. Review the template update before accepting it, especially Agent nodes, middleware connections, skill middleware connections, model settings, state variables, starter prompts, and required plugins.
-6. Save and publish the updated existing Assistant.
-7. Verify that the original Xpert id, slug, public link, conversations, Project Workspace bindings, permissions, and integrations remain attached to the same instance.
-8. Run an installed-platform smoke test for the upgraded graph and the plugin's main workflow.
+Both the CLI and UI should use the supported platform template synchronization/publication logic. Do not redraw a graph manually or create a replacement Assistant to work around an unavailable update action; inspect template provenance and loaded contribution first.
 
-This path is the normal upgrade mechanism for a plugin-managed Assistant. It preserves the installed Assistant's identity and operational history while applying the new template graph.
+## Failure Recovery
 
-## Guardrails
+A failure before publication commit leaves the prior version and draft intact. Resume the recorded release after resolving the cause. `XPERT_PUBLICATION_ACTIVATION_PENDING` means the new version already committed: resume activation for that expected version, rather than publishing another version. The CLI handles this path and verifies/skips completed roles, so retrying a completed release does not increment versions.
 
-- Never use the creation wizard as a fallback merely because the template changed.
-- If `Update from Template` is unavailable, first verify that the existing Assistant retains template provenance and that the refreshed plugin template is loaded. Report the mismatch instead of silently creating another Assistant.
-- Review template-update conflicts when the installed graph contains manual customizations. Do not overwrite intentional local changes without showing their impact.
-- Do not manually redraw the graph to imitate a template upgrade.
-- Do not replace the existing Xpert id or slug during an upgrade.
-- Create a new Assistant only for first installation, an explicitly requested parallel environment, or an intentional breaking migration with an approved identity and data-transition plan.
-- Do not use a versioned acceptance-suite run as an implicit upgrade of an existing production Assistant.
+If templates, scope, or drafts changed outside the recorded release, inspect the differences before beginning a new release. Do not edit receipt hashes or bypass permissions to force recovery.
 
 ## Verification Checklist
 
-- The plugin descriptor exposes the expected new template version.
-- The update was initiated from `Assistant Settings` -> `Update from Template` on the existing Xpert.
-- The Xpert id and slug did not change.
-- Required Agent, middleware, tool, and skill connections match the new template.
-- Existing Primary conversations and Project-scoped file spaces still resolve correctly.
-- The Assistant was saved/published and the installed workflow passes a smoke test.
-- External role Assistants, when used, have exactly one direct required connection from the Orchestrator primary Agent.
-- Plugin deployment and Assistant-suite receipts identify the exact versions tested without embedding credentials in reusable source.
+- Authentication and organization-scoped workspace authoring access are verified separately from plugin installation scope.
+- The loaded plugin version and template identities match the profile.
+- The intended existing Assistants were refreshed through the supported CLI/API or UI path; IDs and slugs remain stable.
+- Models, environments, tools, knowledge, middleware, and Skill connections match the intended updated graph and preserved bindings.
+- Every declared caller/child dependency resolves to the new child publication with exactly one direct required connection.
+- Primary conversations and Project-scoped resources still resolve when relevant to the change.
+- All selected Assistants are published; a fresh bounded execution proves the tested behavior. Suite `readyForTesting` alone does not prove business acceptance.
