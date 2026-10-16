@@ -1,0 +1,4 @@
+interface:
+  display_name: "XpertAI ChatKit Integration"
+  short_description: "Embed ChatKit in an app outside the plugin system"
+  default_prompt: "Use $xpert-chatkit-integration to integrate XpertAI ChatKit into my independent application using the current official documentation."
