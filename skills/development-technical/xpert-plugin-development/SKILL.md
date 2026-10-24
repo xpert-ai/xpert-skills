@@ -10,7 +10,7 @@ Keep this skill to decisions, pitfalls, and lookup pointers. Inspect current SDK
 ## Working principles
 
 - Discover the plugin, platform, and documentation roots; never hardcode machine paths. Upstream plugins: `https://github.com/xpert-ai/xpert-plugins.git`.
-- Read only the references relevant to the task. Source contracts are authoritative; local SDK/tarball success does not establish npm availability or public lockfile reproducibility.
+- Read only the references relevant to the task. Locate source contracts by class, type, capability, and function names rather than fixed file paths. Local SDK/tarball success does not establish npm availability or public lockfile reproducibility.
 - Reuse typed domain services and canonical SDK/contracts imports. Keep authorization, validation, idempotency, and revision checks out of surface-only hooks. Use strict schemas and allowlisted DTOs.
 - For Agent-led work, minimize injected procedural instructions. Provide consistent scope, clear tool contracts and live, actionable feedback; let the Agent choose its approach. Read [Agent, Prompt, and Tool-Owned State](references/agent-prompt-tool-orchestration.md) when designing delegation or recovery.
 - Keep metadata, package contents, and runtime registrations aligned. Process-global entities/controllers require `system` or `tenant` level and a stable `artifactNamespace`: `system` installs in the Default tenant, `tenant` in its owning tenant; `organization` is for organization-isolated plugins without global infrastructure.
@@ -31,6 +31,7 @@ Keep this skill to decisions, pitfalls, and lookup pointers. Inspect current SDK
 
 | Task | Reference |
 | --- | --- |
+| Platform Project Pipelines: domain adapters, approvals, rounds, execution history, and business navigation | [Project Pipelines](../xpert-agentic-app-developer/references/project-pipelines.md), using `xpert-agentic-app-developer`; reuse platform dispatch and the Project Tasks View |
 | Scaffolding, metadata, packaging, local deployment, credentials | [general.md](references/general.md) |
 | Tool schemas, DTOs, pagination, revisioned mutations, Agent titles/icons | [tool-contract-design.md](references/tool-contract-design.md) |
 | Decorated Providers, native MCP Tools/Apps, standalone clients, Publication scope and synchronization | [host-native-mcp-capabilities.md](references/host-native-mcp-capabilities.md) |

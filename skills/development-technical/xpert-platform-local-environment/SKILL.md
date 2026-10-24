@@ -13,7 +13,7 @@ This skill owns platform checkout, local configuration materialization, infrastr
 
 - After the platform is ready, use `xpert-plugin-development` for plugin build, `plugin:deploy:local`, runtime verification, and plugin release states. Read its `references/general.md` local deployment sections rather than duplicating authentication or installation rules here.
 - Use `xpert-assistant-dsl-builder` for Assistant template installation, update, publication, and runtime acceptance.
-- Use `xpert-agent-pipeline-developer` for multi-role Case pipelines, role Assistants, External Xpert orchestration, dashboard/swimlane product behavior, and end-to-end application acceptance.
+- Use `xpert-agentic-app-developer` and its [Project Pipelines reference](../xpert-agentic-app-developer/references/project-pipelines.md) for App integration with platform pipelines, domain adapters, approvals, historical rounds, and business workspace navigation.
 
 ## Environment Modes
 
