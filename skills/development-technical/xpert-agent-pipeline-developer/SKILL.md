@@ -1,9 +1,15 @@
 ---
 name: xpert-agent-pipeline-developer
-description: Design and build Xpert multi-Agent pipeline applications from standardized multi-role business processes, including independent role Assistants, External Xpert orchestration, versioned DAG flows, governed execution, an ECharts management dashboard, an interactive Cases swimlane, inspectable execution records, validation, and release. Use for a new end-to-end pipeline or a substantial pipeline redesign; use narrower Xpert skills for isolated plugin or Assistant DSL changes.
+description: Design and build Xpert multi-Agent pipeline applications, or integrate existing Apps with platform Project Pipelines. Covers independent role Assistants, governed execution, versioned business flows, Workbench views, state synchronization, execution history, validation, and release.
 ---
 
 # Xpert Agent Pipeline Developer
+
+## Existing App integration
+
+When connecting an existing App to platform **Project Pipelines**, read [Project Pipelines integration](references/project-pipelines-integration.md). Preserve its business services and human approvals. Choose one execution authority explicitly: prefer platform scheduling for new workflows; retain provider scheduling only when integrating an independently owned workflow. Do not build a second scheduler merely to populate the Project view. This mode does not require the new-application blueprint, dashboard, Assistant topology or release workflow below; apply only the relevant implementation and validation steps. Project Pipelines and a plugin's own Case swimlane are distinct surfaces.
+
+## New applications and substantial redesigns
 
 Turn a repeatable multi-role business process into a production Xpert pipeline. Unless the user explicitly requests otherwise, deliver one application with a Cases pipeline Workbench containing both a management monitoring dashboard and a multi-Agent swimlane, independently installed/published role Assistants, and an independent Orchestrator Assistant that controls those roles through direct required External Xperts. Keep the business process, Agent authority, human decisions, persisted facts, product design documentation, and release state explicit.
 
