@@ -47,6 +47,36 @@ On macOS, a present Docker CLI does not imply a running daemon. Check the server
 
 When the user requests an empty database, split infrastructure startup from API startup and follow [first-user-initialization.md](first-user-initialization.md) to capture emptiness before schema synchronization. The one-shot setup command starts the API immediately after infrastructure and does not capture that proof.
 
+### Toolchain and download failures
+
+- When Node/Corepack or Docker commands are missing, distinguish an absent installation from an incomplete `PATH`. Docker Desktop may already contain its CLI, Compose plugin, and credential helper. Keep the selected Node and Docker executable directories on the `PATH` inherited by bootstrap and detached services; invoking only an absolute Docker binary can leave `docker-credential-desktop` unavailable.
+- For a missing Node runtime, select a supported LTS compatible with the checkout, use the vendor's official distribution and published checksum, and keep the installation location and shell setup discoverable. Do not upgrade the repository's pinned pnpm to resolve unrelated download failures.
+- If Docker reports a Rosetta installation failure on Apple Silicon, inspect the bounded engine error first. For native arm64 development, continuing without optional Rosetta acceleration can restore startup; record that amd64 acceleration changed and verify `docker info` again. This is a conditional repair, not a default setting for every Mac.
+- A browser or Docker engine reaching a host does not prove that curl, npm, Node, or BuildKit's client-side token request uses the same network path. Inspect the existing system proxy (`scutil --proxy` on macOS) in the host context; a restricted execution context may expose different proxy or socket visibility. Test the failing endpoint through that existing route before declaring the service unavailable.
+- Apply an existing proxy only to the affected command or launcher, with loopback bypasses for the local API/UI. Do not hard-code a proxy port into the skill, copy proxy credentials into logs, or change global proxy settings. For example, use the discovered proxy URL as a process-scoped `HTTPS_PROXY`/`HTTP_PROXY`, preserving appropriate `NO_PROXY` entries.
+- When `docker pull` succeeds but BuildKit fails to authorize public base images through `auth.docker.io`, a command-scoped `BUILDKIT_NO_CLIENT_TOKEN=1` can move normal registry token fetching to the engine's network path. This does not remove registry authentication. Confirm the distinction before retrying; see the [BuildKit auth provider](https://github.com/moby/buildkit/blob/master/session/auth/authprovider/authprovider.go) and [upstream diagnosis](https://github.com/moby/buildkit/issues/4725).
+- If an install script times out downloading a binary, identify the dependency version, release URL, and incomplete artifact from its installed metadata/script. Repair that download through the working network path or a supported installer option, then resume the repository bootstrap with cached dependencies. Do not switch binary versions, disable certificate verification, or bypass all lifecycle scripts. Preserve the lockfile and existing `node_modules`; disclose metadata or generated asset changes after bootstrap.
+
+### Failure ownership
+
+Use this table to route a regression and verify its repair. For the first three rows, check whether the selected source includes the correction before using legacy advice. A correction in source does not establish that every running installation contains it.
+
+| Observed problem | Owner | Treatment |
+|---|---|---|
+| Runner rejects a valid shared workspace because root and the workspace user observe different owners | Xpert platform: `.deploy/nsjail-runner/workspace_identity.py` | The corrected implementation validates the pinned directory as the configured workspace identity when needed. Verify the selected Runner image contains it, then create a runtime and execute repeated non-root commands on the shared mount. |
+| Fresh-instance onboarding returns HTTP 200 with no JSON body | Xpert platform: `packages/server/src/tenant/tenant.controller.ts` | The corrected endpoint returns explicit JSON `null` before initialization and the existing tenant shape afterward. Check this HTTP contract; retain empty-body handling only for older deployed revisions. |
+| Generated external-plugin allowlist excludes built-in bootstrap plugins | This skill's `setup-xpert-local-environment.mjs` | The corrected generator includes the selected built-in plugin root when it is not already covered. Verify new configuration; an existing `.env` is still preserved and may need a targeted correction. Keep platform path enforcement intact. |
+| Missing executable paths, Rosetta startup failure, proxy differences, registry token/download timeouts | Host toolchain or upstream vendor | Keep conditional discovery and recovery guidance in this skill. These observations do not establish an Xpert application-code defect. |
+| Invalid probe runtime ID, incomplete cleanup, health mistaken for execution, or failure lost from the final receipt | Skill/probe workflow | Follow the current protocol, clean up only probe resources, preserve the original error, and report each acceptance layer separately. |
+| Default tenant naming and super-admin organization access | Platform contract used by the skill | Discover the current contract and verify scoped access. These are usage rules, not reasons to alter tenant names or membership policy. |
+
+### Verify an existing fix
+
+1. Establish whether the selected checkout contains the correction and its regression tests. Local review changes do not establish a released version; do not invent a minimum version or assume the fix is upstream.
+2. Check what is actually running. A source API must be rebuilt/restarted through its repository launcher; a Runner image must be rebuilt or replaced from the intended revision within the authorized setup scope. Check artifact identity and process/Compose ownership after the change. Reviewing a patch alone is not deployment.
+3. Repeat the affected behavior: JSON `null` and initialized-tenant HTTP responses for onboarding, or runtime creation and repeated non-root shared-workspace execution for NsJail. Health-only checks do not establish these fixes.
+4. Update the current receipt from the retest. A successful execution against the corrected artifact can supersede the earlier execution failure; retain the earlier attempt's artifact/error as history. If only source or health is verified, keep the affected execution layer `action_required`.
+
 ### Local configuration
 
 Do not overwrite an existing `.env`. For a fresh public checkout, derive missing local configuration from the checked-out `docker/env.example`, not from copied documentation or another user's environment.
@@ -58,7 +88,7 @@ When generating fresh local configuration:
 - set source-mode API/UI URLs and ports explicitly;
 - enable NsJail by default: generate its token, use host loopback port `8090` for source API or the service URL for Docker API, set a dedicated sandbox directory and matching UID/GID; use Docker Desktop development resource mode on macOS;
 - use writable host paths for source `LOG_DIR` and `XPERT_TEMPLATE_DIR`, under the environment state directory; remap `LOG_FILE_PATH` as well when it is set, because it overrides `LOG_DIR`;
-- set `PLUGIN_WORKSPACE_ROOTS` to the narrowest parent containing the supplied plugin repository;
+- set `PLUGIN_WORKSPACE_ROOTS` to the narrowest roots containing the supplied plugin repository **and the selected platform's built-in code plugins**. For the current layout, the latter is `<platform>/packages/plugins`; the host accepts comma-separated roots. A custom plugin-only root can block API schema/bootstrap staging of built-ins such as `draft` and `vlm-default`. Do not broaden access to unrelated checkouts to fix this;
 - never print secret values or include them in the receipt;
 - preserve generated files only when they are ignored by the target repository.
 
@@ -86,6 +116,8 @@ Record the launcher PID separately from the actual `listenerPid`: Corepack, pnpm
 Start source processes with output redirected to the protected environment log files, and inspect only bounded tails or targeted matches during readiness and diagnosis. Startup frameworks may print expanded configuration or environment payloads; never stream or copy an unbounded startup log into chat, a receipt, or CI output. Redact secret-bearing lines, prefer quiet health polling, and report only the failing subsystem, stable error, provenance, and log path needed for follow-up.
 
 First startup can spend time compiling and installing the template's default `PLUGINS` before opening the API port. Use bounded log progress and child-process state to distinguish active work from failure. Once health passes, check for skipped initialization such as template-directory permission errors; readiness alone does not prove every bootstrap subsystem succeeded. A browser opened before API readiness may remain on `/onboarding/unknown`; navigate back to the root after the API is ready.
+
+Inspect the checkout's API launcher before interpreting a disappearing child PID as a crash. The current launcher builds libraries/API, applies schema changes, verifies the schema, and only then serves; separate Node PIDs for these stages are expected. After correcting configuration generated during this setup, restart only the selected API through its normal launcher. The Cloud UI needs a restart only if its own configuration changed.
 
 ## Docker Smoke Mode
 
@@ -145,6 +177,7 @@ The setup helper intentionally does not stop another checkout automatically. An 
 | API ready, UI unavailable | Cloud process/log, UI port, API proxy config | Restart only the selected Cloud process after fixing the cause. |
 | Plugin deploy requests restart | deployment receipt and API log | Restart the selected API, recheck provenance/health, then verify runtime. |
 | Bootstrap fails | first failing repository command and tool versions | Fix that prerequisite and resume; do not delete `node_modules` or lockfiles by default. |
+| Built-in code plugin is outside allowed roots | `PLUGIN_WORKSPACE_ROOTS` and the built-in plugin path named by the startup error | Include the selected built-in plugin root alongside the external plugin root. Correct task-generated config narrowly; preserve pre-existing user config. |
 | Source API cannot create logs or templates under `/var/lib/xpert` | `LOG_DIR`, `LOG_FILE_PATH`, `XPERT_TEMPLATE_DIR` and configuration provenance | Correct task-generated source paths to writable local directories, restart API, and refresh receipt PIDs. |
 | Agent reports NsJail provider unavailable while API is ready | selected agent sandbox and API `NSJAIL_RUNNER_URL`/`NSJAIL_RUNNER_TOKEN` | Follow [sandbox-readiness.md](sandbox-readiness.md); configure/start the matching runner, preserve workspace paths, restart API, and prove an actual scoped command. |
 | Docker bind mount denied | exact mount and owner/mode | Request the documented permission action; do not elevate automatically. |

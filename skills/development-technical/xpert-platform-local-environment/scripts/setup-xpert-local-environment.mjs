@@ -301,7 +301,13 @@ function materializeConfiguration({ platformPath, workspace, pluginPath, mode, s
   if (parseEnv(base).get('LOG_FILE_PATH')) {
     sourceOverrides.set('LOG_FILE_PATH', join(stateDir, 'logs', 'xpert-server.log'))
   }
-  sourceOverrides.set('PLUGIN_WORKSPACE_ROOTS', canonicalPath(pluginPath || workspace))
+  const pluginRoots = [canonicalPath(pluginPath || workspace)]
+  const builtInPlugins = join(platformPath, 'packages', 'plugins')
+  // Bootstrap stages built-in code plugins through the same workspace allowlist.
+  if (existsSync(builtInPlugins) && !pluginRoots.some((root) => isInside(builtInPlugins, root))) {
+    pluginRoots.push(canonicalPath(builtInPlugins))
+  }
+  sourceOverrides.set('PLUGIN_WORKSPACE_ROOTS', pluginRoots.join(','))
   const dockerOverrides = new Map(commonOverrides)
   for (const [key, value] of sandboxDefaults) dockerOverrides.set(key, parseEnv(base).get(key) || value)
   dockerOverrides.set('NSJAIL_RUNNER_URL', 'http://nsjail-runner:8090')

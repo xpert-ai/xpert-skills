@@ -110,6 +110,8 @@ Only then hand off to `xpert-plugin-development`. Plugin `built`, `staged`, `run
 
 ### 5. Repair Conservatively
 
+- Use the [failure ownership table](references/setup-and-lifecycle.md#failure-ownership) to distinguish platform defects, setup-helper defects, and host-tool constraints. Keep platform fixes and their regression tests in the selected platform checkout; retain workflow and compatibility guidance here.
+- For an issue already fixed in source, follow the [fix verification procedure](references/setup-and-lifecycle.md#verify-an-existing-fix): align the running artifact with that source and retest the affected behavior. Keep old workarounds conditional on older revisions.
 - Re-run the inspector before changing a failed environment.
 - Preserve user-owned `.env`, volumes, databases, repositories, logs, and running instances.
 - Do not resolve collisions by stopping another instance or switching checkouts without existing authorization; never delete/reset user data as a repair shortcut.
@@ -126,6 +128,7 @@ Only then hand off to `xpert-plugin-development`. Plugin `built`, `staged`, `run
 - Source setup uses the repository-declared package manager through Corepack and repository-owned scripts.
 - Full Docker health does not prove local source-code plugin loading.
 - Platform health does not prove plugin registration, runtime loading, Assistant publication, or application acceptance.
+- A later successful RPC health check must not erase a failed sandbox execution check. Preserve both results in the handoff receipt; see [sandbox-readiness.md](references/sandbox-readiness.md).
 
 ## Expected Output
 
