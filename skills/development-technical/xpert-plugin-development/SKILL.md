@@ -21,8 +21,12 @@ Keep this skill to decisions, pitfalls, and lookup pointers. Inspect current SDK
 
 ## Deployment and verification
 
+- For end-to-end Agent delivery, use `cloud-project-delivery` when available. The initial feature request covers the authorized development-instance implementation, deployment and live verification; the coordinator must delegate these outcomes to cloud Coding CLI tasks without waiting for phase prompts. Review-only requests retain their narrower scope.
 - For local deployment, prove the selected platform is ready; use `xpert-platform-local-environment` if identity or health is uncertain. Prefer `plugin:deploy:local` at the plugin-declared scope.
+- Inside a prepared process-mode Computer environment, run finite build/test/package commands through that environment's `cli.py ... exec -- <command>`. This applies its selected Node and compatibility settings as well as its paths; changing only `PATH` is insufficient on an emulated host. Read the environment skill when compilation reports runtime/native crashes.
 - Build generated assets before browser acceptance; check freshness with `verify:dist` and inspect the actual package. Run relevant contract tests and dist-first lifecycle loading.
+- Reuse compatible plugin/build scaffolds and already built SDK dependencies. Keep caches enabled unless a concrete stale-artifact problem requires bypassing them. Save the complete build/test output on the first run; do not rerun a successful unchanged pipeline solely to produce a longer report. Documentation-only changes require fresh packaged assets, not automatically recompiling unrelated SDK packages.
+- Verify the packed plugin in a clean installation directory: every runtime import must resolve through a declared plugin dependency or an explicitly supported host peer. Discover the target loader's actual host-peer allowlist; a package being installed in the platform does not make it a supplied peer. Never create extra host links or set `NODE_PATH` in an archive acceptance check. Match host SDK peers to the target's actual version. Read the dependency-resolution section of [general.md](references/general.md) before using a harness fallback.
 - Staged is not running: honor `restartRequired` and descriptor `pending_restart`, then verify a live capability. Plugin deployment does not initialize/publish Assistant templates; that is a separate lifecycle.
 - For suite updates, prefer `assistant:suite:init --refresh` with the prior installation receipt; use `--resume` for interrupted releases. Read [the release workflow](references/local-release-and-assistant-suite.md) for all-role dependency ordering, binding preservation, and activation recovery.
 - Use configured login/secret-store credentials. Never recover browser credentials, log secrets, or place them in repository files. If credentials are missing, stop before deployment and follow `references/general.md`.
@@ -34,6 +38,9 @@ Keep this skill to decisions, pitfalls, and lookup pointers. Inspect current SDK
 | --- | --- |
 | Platform Project Pipelines: domain adapters, approvals, rounds, execution history, and business navigation | [Project Pipelines](../xpert-agentic-app-developer/references/project-pipelines.md), using `xpert-agentic-app-developer`; reuse platform dispatch and the Project Tasks View |
 | Scaffolding, metadata, packaging, local deployment, credentials | [general.md](references/general.md) |
+| New decorated tool plugin with a prepared local platform | [Tool plugin starter](references/tool-plugin-starter.md): generator, typed registration and isolated archive checks; business logic stays unimplemented |
+| Archive installation and real native-tool cases in a process-mode Computer | [Native plugin acceptance](references/native-plugin-acceptance.md): authenticated upload, restart boundary, MCP transport helper and caller-owned business expectations |
+| Single-request delivery through Project tasks and cloud Coding CLI execution | [Cloud Project Delivery](../cloud-project-delivery/SKILL.md) |
 | Tool schemas, DTOs, pagination, revisioned mutations, Agent titles/icons | [tool-contract-design.md](references/tool-contract-design.md) |
 | Decorated Providers, native MCP Tools/Apps, standalone clients, Publication scope and synchronization | [host-native-mcp-capabilities.md](references/host-native-mcp-capabilities.md) |
 | MCP App bridge/theme/security or portable stdio servers | [mcp-tools-and-apps.md](references/mcp-tools-and-apps.md) |

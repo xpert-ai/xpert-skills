@@ -27,6 +27,9 @@ Use native Providers for business methods executed and governed by Xpert. Use st
 
 ## Updating and checking
 
+For a process-mode Computer, use [Native plugin acceptance](native-plugin-acceptance.md)
+for the packaged-install and real-client helper. Supply your own business cases.
+
 - Build/package, deploy/refresh, and restart if required before expecting new runtime definitions. Enabled auto-managed Publications reconcile on Provider registration/bootstrap: preserve same-type/key names, enabled states, and policy overrides; add/remove/update capabilities in place and retain valid state on failure.
 - Manual Publications require **Refresh available capabilities → select → Save**. Catalog refresh alone does not publish a new binding. Refresh/reconnect the client afterward; do not recreate the endpoint or alter unrelated organization grants.
 - Verify `initialize`, `tools/list`, and a read-only `tools/call`. For Apps, match Tool `_meta.ui.resourceUri` to `resources/list/read`, check HTML MIME and DTO, and test rendering separately in an Apps-capable client. Cover cross-organization denial, invalid declarations, and synchronization preserving policy.
@@ -56,5 +59,5 @@ Report unit tests, published-dependency builds, plugin lifecycle, real-client ex
 Resolve these paths within the selected checkout; inspect types and adjacent tests instead of copying implementation here.
 
 - SDK: `packages/plugin-sdk/src/lib/tool-provider/`, `lib/mcp/app.ts`, and `lib/toolset/define-tool.ts` beneath the same `src` root.
-- Host: `packages/server-ai/src/plugin-resource/plugin-mcp-server.service.ts` and `packages/server-ai/src/mcp-publication/` (catalog, runtime, App bundles, keys).
+- Host: `packages/server-ai/src/plugin-resource/mcp/plugin-mcp-server.service.ts` and `packages/server-ai/src/mcp-publication/` (catalog, runtime, App bundles, keys).
 - Product docs: `ai/plugin/host-native-mcp-tools` and `ai/middleware/mcp-server/index` in the documentation repository's language tree.
