@@ -29,12 +29,12 @@ in the Project workspace, outside the environment state directories below.
 Record the existing plugin versions and desired archive digest in task evidence.
 
 ```bash
-python3 <platform>/tools/local-environment/cli.py --platform <platform> --state <state> \
+python3 <platform>/tools/local-environment/cli.py --platform <platform> --state <state> --project-root <project-root> \
   checkpoint create --name before-install --exclusive-project <project-id>
-python3 <platform>/tools/local-environment/cli.py --platform <platform> --state <state> start
+python3 <platform>/tools/local-environment/cli.py --platform <platform> --state <state> --project-root <project-root> start
 ```
 
-Creation briefly stops the four owned services, keeps the managed Supervisor,
+Creation briefly stops the four owned services, keeps the local Supervisor,
 requires a clean PostgreSQL shutdown and copies the cold state. It leaves services
 stopped and returns `checkpoint_created`; run finite `start` before deployment.
 An exit 75 still means pending: continue with `start`, not another restart.
@@ -54,10 +54,10 @@ installation recovery, not a portable machine backup or a source-code rollback.
 Keep the failed installation receipt and logs. The same Coding executor can run:
 
 ```bash
-python3 <platform>/tools/local-environment/cli.py --platform <platform> --state <state> \
+python3 <platform>/tools/local-environment/cli.py --platform <platform> --state <state> --project-root <project-root> \
   checkpoint restore --name before-install --exclusive-project <project-id>
-python3 <platform>/tools/local-environment/cli.py --platform <platform> --state <state> start
-python3 <platform>/tools/local-environment/cli.py --platform <platform> --state <state> \
+python3 <platform>/tools/local-environment/cli.py --platform <platform> --state <state> --project-root <project-root> start
+python3 <platform>/tools/local-environment/cli.py --platform <platform> --state <state> --project-root <project-root> \
   checkpoint verify --name before-install --exclusive-project <project-id>
 ```
 
@@ -65,7 +65,7 @@ Restore works without a healthy API. It verifies the checkpoint and instance
 binding, stops owned services, checks port ownership and database continuity,
 stages a verified copy, and moves the previous state into a private retained backup.
 Operations share the lifecycle mutation lock. An interrupted restore leaves a
-journal; normal managed service startup refuses partial state. Repeat the same
+journal; normal local service startup refuses partial state. Repeat the same
 restore command to resume. A changed already-restored directory is a concrete
 conflict, not permission to overwrite it or delete the journal manually.
 

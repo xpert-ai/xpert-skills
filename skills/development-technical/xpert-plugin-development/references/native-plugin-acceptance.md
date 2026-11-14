@@ -26,7 +26,7 @@ injected by the environment. Never supply outer-platform credentials in the gues
 Choose the plugin's declared installation scope. For a tenant-level package:
 
 ```bash
-python3 <platform>/tools/local-environment/cli.py --platform <platform> --state <state> \
+python3 <platform>/tools/local-environment/cli.py --platform <platform> --state <state> --project-root <project-root> \
   exec --authenticated -- python3 <skill>/scripts/plugin-acceptance.py --scope tenant \
   install --archive <artifact.tgz> --sha256 <implementation-receipt-sha256> \
   --evidence <project>/evidence/install.json
@@ -35,10 +35,11 @@ python3 <platform>/tools/local-environment/cli.py --platform <platform> --state 
 This uploads multipart `file` to `POST /api/plugin/archive`; it submits no
 `workspacePath` or configuration. Preserve the receipt. Honor `restartRequired`
 or `pending_restart` with the process-mode CLI's finite API restart command, then
-check the descriptor's installed/running versions and `loadStatus`. Use the CLI's
-managed background-command facility for long finite builds/restarts; wait on its
-returned handle. `nohup`, double-forking or a trailing `&` does not transfer process
-ownership to the platform-managed Supervisor.
+check the descriptor's installed/running versions and `loadStatus`. Keep finite
+build/restart orchestration attached to the CLI's execution session and wait on its
+returned handle. The Coding CLI manages local services; they may stop when its
+task ends. Before independent review, check and restart the same project instance
+when needed, then test the unchanged candidate. No cross-task host owner is required.
 
 ## Invoke the actual host provider
 
@@ -53,7 +54,7 @@ plugins. The host chooses publication ownership and grants the current organizat
 access; a tenant publication alone does not imply organization authorization.
 
 ```bash
-python3 <platform>/tools/local-environment/cli.py --platform <platform> --state <state> \
+python3 <platform>/tools/local-environment/cli.py --platform <platform> --state <state> --project-root <project-root> \
   exec --authenticated -- python3 <skill>/scripts/plugin-acceptance.py --scope organization \
   verify --plugin <package-name> --component <provider-component-key> \
   --cases <project>/evidence/live-cases.json --evidence <project>/evidence/live-results.json
