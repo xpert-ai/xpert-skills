@@ -71,14 +71,15 @@ modify container privileges, host resources or approval policy from the guest.
 
 Use the current tool schemas; the Project Tasks mappings are:
 
-| Purpose | Tool / contract |
-| --- | --- |
-| Discover executors | `project_list_task_runtimes`; choose an authorized compatible binding |
-| Persist work | Project task creation tools with objective, requirements and deliverables |
-| Dependencies | `project_update_task_plan` using current revision and predecessor IDs |
-| Launch | `project_dispatch_task` with latest revision and the selected binding |
-| Observe | `project_get_task`; inspect actual attempts, invocation result and artifacts |
-| Accept / rework | `project_decide_task` with current specification digest, implementation execution, evidence revision, checks and rationale |
+| Purpose            | Tool / contract                                                                                                            |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Discover executors | `project_list_task_runtimes`; choose an authorized compatible binding                                                      |
+| Persist work       | Project task creation tools with objective, requirements and deliverables                                                  |
+| Dependencies       | `project_update_task_plan` using current revision and predecessor IDs                                                      |
+| Launch             | `project_dispatch_task` with latest revision and the selected binding                                                      |
+| Observe            | `project_get_task`; inspect actual attempts, invocation result and artifacts                                               |
+| Recover delivery   | `project_recover_task_delivery` with current invocation revision; collect report/files without another execution          |
+| Accept / rework    | `project_decide_task` with current specification digest, implementation execution, evidence revision, checks and rationale |
 
 Confirm these names and fields against the advertised schemas. A task dependency
 or a todo item does not launch an executor. The Runtime already launches its coding
@@ -116,7 +117,7 @@ state change is expected. If several inspections add no information, return the
 specific unresolved question and existing evidence for a narrower repair task;
 do not consume the remaining execution budget repeating the investigation.
 
-Keep the final structured summary brief: outcome, evidence paths, artifact digest
+Keep the final Markdown report brief: outcome, evidence paths, artifact digest
 and unresolved issues. Use changes/tests/file items for details. Full implementation
 means complete files in the workspace, not full source pasted into the response;
 include verbatim source only when explicitly requested. Return promptly once the
