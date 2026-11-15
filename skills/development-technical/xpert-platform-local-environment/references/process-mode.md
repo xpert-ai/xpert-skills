@@ -42,8 +42,15 @@ the install receipt, any required restart and a real loaded-tool invocation.
 The process-mode bootstrap also installs its tested Node 22 toolchain under the
 user home. It leaves the Computer's system Node/Coding CLI installation unchanged;
 the platform's native dependencies must build against the project Node version.
-It explicitly builds the Local Shell provider's `node-pty` and runs its PTY smoke
-test without globally approving other dependency build scripts. API startup also
+Bootstrap reuses a verified dependency installation when lockfiles, package
+manifests, patches, install scripts, project Node and installed layout are unchanged.
+An ordinary source edit or Git commit does not require reinstalling dependencies.
+It runs a real PTY smoke test each time and repairs `node-pty` only when that probe
+fails, without globally approving other dependency build scripts. A failed PTY
+repair can reuse the successful installation on retry. Old bootstrap receipts
+require one successful bootstrap with the new script. Compilation belongs to
+`build`/`start`, including the Local Shell provider; bootstrap no longer prebuilds it.
+API startup also
 checks the staged Local Shell plugin's own PTY and, when needed, rebuilds only that
 plugin's node-pty against the project Node ABI. The platform's default policy of
 skipping arbitrary plugin install scripts remains in place. Cypress's separate
@@ -145,9 +152,16 @@ statistics and control files while running: validate database continuity with
 or test value, not a byte-for-byte hash of the live data directory. Configuration
 and credentials must remain stable across an idempotent prepare; never print them.
 
-Long setup/build commands can take minutes. Use the executor's long-run status and
-cancellation mechanisms, inspect bounded progress and resume from the last verified
-state. On a readiness timeout, exit **75** and JSON `status: pending` mean the
+Long setup/build commands can take minutes. Distinguish a shell/readiness observation
+window from the Coding CLI task's actual execution deadline. While the owned process
+is progressing and the remaining execution budget permits, keep the task active and
+continue observing it. Do not return a final result merely because a short observation
+window elapsed: task cleanup can kill a useful build. If progress stops or a command
+fails, inspect bounded logs and choose the next diagnostic before deciding to restart.
+At the real deadline or a concrete blocker, preserve paths, the last verified stage,
+and useful evidence for continuation; never claim readiness from a running PID.
+
+On a readiness timeout, exit **75** and JSON `status: pending` mean the
 orchestration can resume; `serviceStillRunning` distinguishes an active owned
 process from a stage not yet started. This is not a success or a failed build.
 While the Coding CLI task remains active, the local Supervisor can continue a
@@ -155,17 +169,26 @@ build after a bounded start command returns. Task completion or cancellation may
 stop it; the next task rechecks state and resumes through start.
 Inspect `status` and bounded logs, then repeat **`start` with the same service
 selection** to wait for that process and continue remaining stages. In particular,
-after a full start times out on Web, repeating full start also proceeds to API.
+after a full start times out on API, repeating full start also proceeds to Web.
 Do not repeat `restart` just because the caller timed out, and do not
 interpret a running build PID as readiness. Setup/start holds the environment
 mutation lock; status/logs remain available. To stop during a long wait, end the
 finite waiting command first, then stop the selected service. Do not launch competing mutations while an earlier start/bootstrap still owns
 the lock.
 
-The default full start prepares Web first, starts a lightweight Vite preview of that
-complete build, then prepares/migrates/starts the API. It reuses Angular's locked Vite
-and the repository's API/OIDC proxy configuration. The frontend compiler and
-dependency prebundler do not stay resident alongside the API and browser. The
+Choose services from the actual acceptance surface. For backend/plugin API tests,
+use `start --service api`; this brings up PostgreSQL/Redis and API without Web.
+`status` reports `api_ready` when these are healthy. This does not prove frontend
+behavior: start Web and use the unchanged four-service `status --strict` check for
+UI or complete-platform acceptance. Material/report-only work should reuse its exact
+candidate and existing evidence; start services only when a live check is required.
+
+The default full start prepares/migrates/starts the API before Web, so a Web build
+does not delay API readiness. The running API consumes memory during the Web build;
+for a constrained full-stack profile, prebuild Web with `build --service web` before
+starting the platform. Do not run heavy builds concurrently by default. Web uses
+Angular's locked Vite and the repository's API/OIDC proxy configuration. Its finite
+compiler exits before the preview begins; it does not remain as a watch process. The
 Computer build configuration uses JIT, no source maps, serial TypeScript and
 bounded Node/Go memory; it is a development configuration, not the production AOT
 release gate. `build --service web|api` can prepare an artifact as a separate finite
@@ -178,6 +201,13 @@ generated input assets and output bytes. Missing or changed inputs/outputs trigg
 a new build; a failed/interrupted build never publishes a success receipt. Keep
 the frozen dependency installation intact; manual edits inside node_modules are
 unsupported. API reuse still runs schema apply and verify on every startup.
+
+Recent scripts emit `XPERT_DEV_PHASE` events with phase, state and elapsed time in
+existing logs. `status` and pending responses expose bounded log metadata and the
+last available phase. Compare those with process ownership, health and bounded
+logs to distinguish installation, compilation, migration and serving costs. An old
+event is not proof of current progress, and long output can push it out of the log
+tail. These are diagnostics for the Agent's decision, not automatic retry rules.
 When source contains a fix missing from the running artifact, use the repository
 CLI's `build --service api` or normal API start and verify the resulting artifact.
 That difference alone is not evidence of a corrupt Nx cache. Do not globally set
