@@ -266,3 +266,19 @@ An explicit conflict from another package must leave the old runtime intact.
 Report that conflict and the selected project binding once; do not repeatedly
 restart, rewrite names or delete unrelated plugins. Project isolation prevents
 previous projects' fixtures from being part of the normal installation baseline.
+
+## Project context and checkout provenance
+
+Use the host-prepared execution context when provided. Skill references resolve
+inside that skill copy; platform commands resolve inside the selected Project
+checkout. Record its absolute path, Git commit, local changes and environment state
+path before starting services. Use that checkout's `tools/local-environment/cli.py`
+and inspect its `--help`; never pick a similarly named untracked script from another
+Project. Preserve local modifications. If the selected checkout lacks a required
+command, record that concrete compatibility gap and use the documented supported
+setup for that checkout; do not infer a host service-owner dependency from old notes.
+
+Same-Project retries and execution reviews reuse the recorded instance data and
+may restart its services. New Projects use their own checkout and mutable state.
+Shared Computer files are not a filesystem security boundary: these rules establish
+source ownership and prevent accidental context reuse, without deleting old work.
