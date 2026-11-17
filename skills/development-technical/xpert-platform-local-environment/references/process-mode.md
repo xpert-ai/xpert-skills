@@ -77,6 +77,20 @@ Choose persistent absolute paths and inspect port ownership. Defaults are API
 uses its own localhost. An outer browser needs the platform's authenticated preview
 or explicit development port forwarding; its localhost is a different machine.
 
+Keep runtime state on the Computer's Linux home volume, using the default
+`~/.local/share/xpert-dev/environments/<checkout-id>` or a project-specific path
+under that home. Supervisor and PostgreSQL require Unix sockets; a host bind mount
+may reject them with EINVAL even when ordinary file writes work. Source may remain
+under the mounted Project root. On checkouts with `dependency_layout.py`, bootstrap
+places a new checkout's node_modules under the persistent runtime cache, with a
+separate directory per checkout, and reuses `~/.cache/xpert-pnpm-store`. Only the
+package store is shared; mutable dependencies and instance data remain separate.
+Existing directories or symlinks keep their current layout and warm receipts.
+Inspect `status.dependencies` and bootstrap's reuse receipt before assuming a cold
+install is necessary. Older checkouts require selecting the Linux-volume dependency
+layout before bootstrap. Keep that selection fixed; moving node_modules during an
+installation invalidates its receipt.
+
 ## Run the lifecycle
 
 `start` and `restart` are finite orchestration commands with a default 60-second
