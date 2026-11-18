@@ -17,6 +17,11 @@ caches rather than the previous project's mutable instance. The checkout must in
 report the missing capability; do not silently switch to Docker-in-Docker, sudo,
 host Docker socket access, or a different repository revision.
 
+With `tools/local-environment/source_checkout.py`, source archives without `.git`
+use the supplied ignore rules and record an `archive:sha256:` source identity.
+Do not create a fake upstream commit merely to run setup. The `.env` ignore
+protection still applies, and build reuse checks source and output bytes.
+
 The base environment needs Linux, Python 3.12+, Node/Corepack compatible with the
 checkout, Git, Supervisor and the usual native build tools. PostgreSQL, pgvector,
 Redis and their shared libraries are downloaded on demand, checksum verified and
@@ -166,14 +171,14 @@ statistics and control files while running: validate database continuity with
 or test value, not a byte-for-byte hash of the live data directory. Configuration
 and credentials must remain stable across an idempotent prepare; never print them.
 
-Long setup/build commands can take minutes. Distinguish a shell/readiness observation
-window from the Coding CLI task's actual execution deadline. While the owned process
-is progressing and the remaining execution budget permits, keep the task active and
-continue observing it. Do not return a final result merely because a short observation
-window elapsed: task cleanup can kill a useful build. If progress stops or a command
-fails, inspect bounded logs and choose the next diagnostic before deciding to restart.
-At the real deadline or a concrete blocker, preserve paths, the last verified stage,
-and useful evidence for continuation; never claim readiness from a running PID.
+Long setup/build commands can take minutes. A readiness observation window can
+end while the owned process continues. Keep the task active and continue that
+operation while logs and process activity show progress; a pending response does
+not justify returning an environment-only final result. Work on independent source
+or unit tests while the build runs when feasible. If progress stops or a command
+fails, inspect bounded logs before deciding to restart. For a concrete unresolved
+blocker, preserve paths, the last verified stage and useful evidence; never claim
+readiness from a running PID.
 
 On a readiness timeout, exit **75** and JSON `status: pending` mean the
 orchestration can resume; `serviceStillRunning` distinguishes an active owned
