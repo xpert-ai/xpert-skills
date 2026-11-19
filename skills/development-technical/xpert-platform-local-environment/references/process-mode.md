@@ -101,39 +101,45 @@ installation invalidates its receipt.
 `start` and `restart` are finite orchestration commands with a default 60-second
 readiness wait, even when a cold build takes many minutes. Run them in the CLI's
 normal foreground command/session; do not detach them with `nohup`, `setsid` or a trailing `&`.
-The locally started Supervisor runs services while the Coding CLI task is active.
-Keep the finite orchestration command attached so it can start the remaining services.
+Keep the finite orchestration command attached so it can start the remaining
+services. The following placeholders are caller-selected persistent absolute paths.
+The main Assistant decides retention and final shutdown; Coding CLI performs the
+local operations. First inspect the original instance and reuse healthy services.
 
-The following placeholders are caller-selected persistent absolute paths.
-Coding CLI tasks are finite: the executor deliberately reaps their descendants
-when they finish, including double-forked Supervisor daemons. This is acceptable:
-the next task checks and starts the same instance again. The Coding CLI decides
-when to start, inspect, repair and stop services; no cross-task process owner is required.
-
-1. Let the Coding CLI prepare the dedicated checkout and perform finite setup:
+1. For a new environment only, prepare the checkout and perform finite setup:
 
 ```bash
 python3 <xpert-root>/tools/local-environment/cli.py \
   --platform <xpert-root> --state <persistent-state> --project-root <project-root> prepare \
-  --plugin-root <plugin-parent> --supervisor-mode detached
+  --plugin-root <plugin-parent>
 python3 <xpert-root>/tools/local-environment/cli.py \
   --platform <xpert-root> --state <persistent-state> --project-root <project-root> bootstrap
 ```
 
-2. The Coding CLI manages services with ordinary project commands. Xpert's
-`start` launches a local Supervisor in detached mode and retains dependency order,
-readiness checks, private logs and database initialization. No host service client,
-platform token, Docker socket or extra privilege is needed. Other applications may
-use the CLI's available shell/session facilities and their own startup commands.
+2. When the Computer advertises `computer-service` and services are needed across
+Coding tasks, inspect `computer-service list`. If the environment is not already
+running, start the project's foreground supervisor through that local manager:
 
-A service may stop when the Coding CLI task completes or is cancelled. Do not
-weaken executor cleanup or seek an external owner to keep it alive. Before a later
-attempt or independent review, inspect the original project instance and call
-`start` again when necessary; preserve the package, source, database and credentials.
-Save project paths, startup commands and test evidence rather than assuming a saved
-PID is still alive. A stopped process alone is not a failed deliverable.
-`sandbox_service_start` is a host Assistant tool, not a command available to the CLI
-or a prerequisite for this flow. Stop services when the current work is finished.
+```bash
+computer-service --project <project-root> start development-environment \
+  --cwd <xpert-root> -- python3 tools/local-environment/cli.py \
+  --platform <xpert-root> --state <persistent-state> --project-root <project-root> supervise
+```
+
+`supervise` uses the existing environment, selects managed supervision, and holds
+its Supervisor in the foreground. The Computer-local manager owns this process
+outside the individual Coding execution. The following finite `start` commands
+still control dependency order, readiness, logs and database initialization.
+No platform token, Docker socket, root access or host application launcher is needed.
+Use `computer-service logs development-environment` for the outer process and the
+project CLI logs for individual services. Do not wrap finite `start` as the
+persistent process: it exits after readiness and is not the supervisor.
+
+If the selected checkout lacks `supervise`, inspect its supported foreground
+launcher rather than inventing flags. Without `computer-service`, the ordinary
+`--supervisor-mode detached` path remains available for task-local testing; its
+processes can be cleaned up at Coding task exit. Report that limitation and keep
+reproducible paths/data. `sandbox_service_start` is a host tool, not a CLI command.
 
 3. Start and verify the project instance:
 
@@ -147,7 +153,7 @@ python3 <xpert-root>/tools/local-environment/cli.py \
 ```
 
 For an infrastructure-only milestone, omit bootstrap initially and call
-`start --infra-only` after prepare; the local owner starts Supervisor automatically. The environment records
+`start --infra-only` after prepare and the managed-supervisor step when using project services. The environment records
 the empty public schema before applying migrations. `start` uses the repository's
 OIDC initializer to create/reuse a private signing key in the state directory.
 `initialize` creates the required default tenant and a separate development
@@ -157,14 +163,15 @@ verifies the administrator. Never echo the credential file.
 4. After the implementation CLI exits, a separate execution reviewer checks the
 same project instance with `status`. If its services stopped, use `start` with
 the recorded checkout, state and project root, then verify health and the unchanged
-candidate. Process identities may change on restart; do not require cross-task
-process survival. Keep any completion/protocol diagnostic even if business
-artifacts look correct.
+candidate. With project services enabled, compare the existing manager/service
+identities and reuse them; do not restart solely because this is a new task.
+Keep services for review/rework or pending human acceptance. Keep any
+completion/protocol diagnostic even if business artifacts look correct.
 
 Reuse the generated `status.json`, `database-initialization.json` and administrator
 verification receipt as task evidence; do not ask the model to transcribe large
 logs into a report. `status` includes the owned Supervisor generation and service
-PIDs for current ownership checks, not a requirement to preserve them across tasks.
+PIDs for current ownership and cross-task reuse checks.
 PostgreSQL legitimately changes WAL,
 statistics and control files while running: validate database continuity with
 `SELECT system_identifier FROM pg_control_system()` and a known application record
@@ -183,9 +190,9 @@ readiness from a running PID.
 On a readiness timeout, exit **75** and JSON `status: pending` mean the
 orchestration can resume; `serviceStillRunning` distinguishes an active owned
 process from a stage not yet started. This is not a success or a failed build.
-While the Coding CLI task remains active, the local Supervisor can continue a
-build after a bounded start command returns. Task completion or cancellation may
-stop it; the next task rechecks state and resumes through start.
+The local Supervisor can continue a build after a bounded start command returns.
+With project services enabled it also survives the Coding execution; ordinary
+task-local supervision does not. The next task rechecks state before resuming.
 Inspect `status` and bounded logs, then repeat **`start` with the same service
 selection** to wait for that process and continue remaining stages. In particular,
 after a full start times out on API, repeating full start also proceeds to Web.
@@ -242,16 +249,18 @@ continuous frontend watch process needs a separately sized resource profile.
 The CLI also provides `logs --service api` (or `terminal`), `restart --service api`,
 `restart`, `stop`, and `stop --service web`. Restart keeps the local Supervisor
 alive; full stop ends it as well. After full stop, task cleanup or Computer recreation,
+restore the foreground supervisor registration when using project services, then
 call `start` with the same checkout/state/home to launch the local processes again.
 Stale process identities must not be adopted. Conflicting ports or unrelated `.env`
 files require a different owned environment or deliberate configuration repair.
 
-`prepare` defaults to detached supervision for new environments. To change a
-previously managed environment, repeat prepare with `--supervisor-mode detached`;
-this changes the next startup policy without replacing its database or credentials.
-Detached processes are still subject to executor cleanup. Explicit `managed` plus
-`supervise` remains available for callers that choose to hold a foreground Supervisor,
-but is not required for Coding CLI development or review.
+`prepare` still defaults to detached supervision for compatibility. The explicit
+`supervise` step selects managed supervision without replacing data or credentials.
+The main Assistant delegates final cleanup only after no review/rework or human
+acceptance needs the environment. The Coding CLI then uses the project `stop`
+and `computer-service stop development-environment` as appropriate, verifies
+terminal state and closed endpoints, and returns receipts. Restart only affected
+services during development; do not shut down the whole instance at every handoff.
 
 ## Plugin handoff
 
