@@ -43,6 +43,7 @@ Keep this skill to decisions, pitfalls, and lookup pointers. Inspect current SDK
 | Single-request delivery through Project tasks and cloud Coding CLI execution | [Cloud Project Delivery](../cloud-project-delivery/SKILL.md) |
 | Tool schemas, DTOs, pagination, revisioned mutations, Agent titles/icons | [tool-contract-design.md](references/tool-contract-design.md) |
 | Decorated Providers, native MCP Tools/Apps, standalone clients, Publication scope and synchronization | [host-native-mcp-capabilities.md](references/host-native-mcp-capabilities.md) |
+| MCP service `configSchema`, saved connection settings, configuration tabs and custom Views | [mcp-service-configuration.md](references/mcp-service-configuration.md) |
 | MCP App bridge/theme/security or portable stdio servers | [mcp-tools-and-apps.md](references/mcp-tools-and-apps.md) |
 | Large or iterative data mutations | [large-data-mutation-workflows.md](references/large-data-mutation-workflows.md) |
 | Persistence, atomic writes, quota/task claims, or transaction migration | [database-access-and-transactions.md](references/database-access-and-transactions.md) |

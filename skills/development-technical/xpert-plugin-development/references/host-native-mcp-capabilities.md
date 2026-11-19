@@ -10,6 +10,10 @@ Use native Providers for business methods executed and governed by Xpert. Use st
 - Runtime descriptors are authoritative; manifest `toolsets` are not required. Align Provider/component keys and optional marketplace contributions. Keep identities client-neutral and let the host derive endpoint slugs.
 - Use a hand-written `ToolsetStrategy` only for capabilities/lifecycle the decorators cannot express. Preserve provenance and remove derived registrations on unload; invalid replacements must not evict valid registrations.
 
+## Service configuration
+
+For connection settings or other service-level options, read [MCP Service Configuration](mcp-service-configuration.md). Declare the Provider's `configSchema` for a host-rendered form; keep saved values on the bound toolset instance and out of model-facing tool arguments. Additional service Views use a separate contribution contract.
+
 ## MCP Apps
 
 - Declare `defineMcpApp()` in Provider `apps`; bind an existing Tool with `mcp.app.resourceKey`. The referenced App must belong to that Provider. Use `['model', 'app']` for shared entry Tools.
