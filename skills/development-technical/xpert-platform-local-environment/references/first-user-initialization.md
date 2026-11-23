@@ -21,6 +21,10 @@ Read the selected checkout before sending requests. Current source pointers are:
 
 At the verified checkout, `GET /api/tenant/onboard` reports onboarding state; `POST /api/tenant/onboard` accepts `name`, `superAdmin`, and `defaultOrganization`. The `superAdmin.hash` field receives the new plaintext password over the local request and is hashed by the server. Do not pre-hash it or insert a user directly into SQL. Recheck these contracts when the checkout changes.
 
+For a platform containing the onboarding response fix, expect HTTP 200 with `Content-Type: application/json`: parse JSON `null` before initialization and a tenant object afterward. Use normal JSON parsing for that contract. Verify the API was rebuilt from the corrected checkout; the HTTP regression tests cover both states.
+
+Only older deployed revisions need the empty-body compatibility path: after confirming that legacy contract, check the status and read the body as text before parsing non-empty JSON. Do not treat an arbitrary parse failure or unsuccessful response as evidence that initialization is available. Use the checkout's `DEFAULT_TENANT` constant for the default tenant name, separately from the user-chosen organization name.
+
 The public POST guards against an existing tenant. Check initialization state first and never retry the POST blindly after a timeout: tenant/user/organization creation can partially succeed. Inspect safe identifiers and database state before deciding on recovery.
 
 ## Credential Handoff and Verification
@@ -33,7 +37,7 @@ After creating the tenant and organization:
 
 1. Log in through the current login API using the saved password; keep returned tokens in memory.
 2. Verify that the returned role is `SUPER_ADMIN` and make one authenticated request such as the current `/api/auth/alive` endpoint.
-3. Confirm the expected tenant and default organization and their association with the created account. Record identifiers and verification booleans, not password hashes or tokens.
+3. Confirm the expected tenant and default organization and verify access under explicit organization context. A `SUPER_ADMIN` can have tenant-wide organization access without a `UserOrganization` membership row; inspect the current access contract rather than creating a membership to satisfy a guessed check. Record identifiers and verification booleans, not password hashes or tokens.
 4. Verify API/UI health and process provenance again, then open the root UI and confirm it reaches a usable login or signed-in page.
 5. Report the URL, account name, credential-file link, organization, and startup instructions. Note unconfigured model providers when relevant; do not require provider secrets to complete account setup.
 

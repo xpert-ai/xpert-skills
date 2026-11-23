@@ -364,6 +364,22 @@ Always try to cover:
 
 Treat the plugin development harness and the installed host as different module-resolution environments. A plugin may correctly declare a host-provided package as a peer while a standalone harness cannot resolve one of that peer's dependencies.
 
+For an archive installation, inspect the selected loader's explicit host links once.
+In hosts that link only `@xpert-ai/plugin-sdk` and `@xpert-ai/contracts`, ordinary
+runtime imports such as `zod/v3` must be bundled or backed by a declared runtime
+dependency. The presence of Zod, NestJS or another package in the platform checkout
+does not promise it to an isolated installed plugin. The archive installer may
+omit peers and install only `dependencies`/`optionalDependencies`.
+
+A clean archive check must reproduce that resolution boundary: extract the exact
+tarball, install its production dependencies, supply only the verified host peers,
+and load the shipped entry. Do not link all peerDependencies, inherit workspace
+`node_modules`, or use `NODE_PATH` to make this check pass. The harness fallback
+below is diagnostic only; it cannot serve as archive-installation evidence.
+After a concrete missing-module error, repair the dependency closure, rebuild the
+affected artifact and retry installation. Preserve the failed attempt; repeated
+source inspection without a changed hypothesis is not a repair.
+
 1. Inspect the plugin package, harness workspace, lockfile, and selected host checkout before changing dependencies.
 2. Prefer normal workspace wiring or the repository's declared harness bootstrap when available.
 3. When the installed host intentionally provides the missing peer/transitive dependency, a bounded local harness run may use the discovered host dependency root, for example through a process-scoped `NODE_PATH`; derive that path from the selected checkout and never write a machine-specific absolute path into package scripts or documentation.

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync, existsSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -23,6 +23,7 @@ function fixture(t) {
   const state = join(workspace, 'private-state')
   const bin = join(workspace, 'bin')
   mkdirSync(join(platform, 'docker'), { recursive: true })
+  mkdirSync(join(platform, 'packages', 'plugins'), { recursive: true })
   mkdirSync(bin)
   mkdirSync(join(platform, '.deploy/nsjail-runner'), { recursive: true })
   writeFileSync(join(platform, '.deploy/nsjail-runner/docker-compose.nsjail.yml'),
@@ -67,7 +68,7 @@ if (name === 'lsof' && !args.includes('-v')) {
   for (const name of ['docker', 'corepack', 'lsof', 'security']) {
     writeFileSync(join(bin, name), stub, { mode: 0o755 })
   }
-  const run = (mode = 'source', extraEnv = {}, start = false, expectedStatus = 0) => {
+  const run = (mode = 'source', extraEnv = {}, start = false, expectedStatus = 0, extraArgs = []) => {
     const env = { ...process.env, ...extraEnv, PATH: `${bin}:${process.env.PATH}`,
       TEST_SECURITY_CALL: join(workspace, 'security-called') }
     if (start) {
@@ -84,7 +85,7 @@ if (name === 'lsof' && !args.includes('-v')) {
     const result = spawnSync(process.execPath, [...(start ? ['--import', fetchMock] : []), setup,
       '--workspace', workspace, '--platform', platform, '--state-dir', state,
       '--mode', mode, '--skip-bootstrap', ...(start ? ['--reuse-infra'] : ['--skip-start']), '--apply',
-      '--api-url', 'http://127.0.0.1:1/api/health/ready', '--web-url', 'http://127.0.0.1:1/'
+      '--api-url', 'http://127.0.0.1:1/api/health/ready', '--web-url', 'http://127.0.0.1:1/', ...extraArgs
     ], { env, encoding: 'utf8', timeout: 20000 })
     assert.equal(result.status, expectedStatus, result.stderr)
     return { ...result, receipt: JSON.parse(readFileSync(join(state, 'state.json'), 'utf8')) }
@@ -127,6 +128,27 @@ test('source generated from existing Docker config remaps overriding log path an
   f.run()
   assert.equal(f.read('docker/.env'), docker)
   assert.ok(f.read('.env').includes(`LOG_FILE_PATH=${f.state}/logs/xpert-server.log\n`))
+})
+
+test('an external plugin allowlist also permits built-in bootstrap plugins without allowing sibling checkouts', (t) => {
+  const f = fixture(t)
+  const plugin = join(f.workspace, 'external-plugin')
+  mkdirSync(plugin)
+  writeFileSync(join(plugin, 'package.json'), JSON.stringify({ name: '@example/local-plugin' }))
+  f.run('source', {}, false, 0, ['--plugin-dir', plugin])
+  const roots = f.read('.env').match(/^PLUGIN_WORKSPACE_ROOTS=(.+)$/m)[1].split(',')
+  const allowed = (path) => roots.some((root) => path === root || path.startsWith(`${root}/`))
+  assert.equal(allowed(join(realpathSync(plugin), 'dist')), true)
+  assert.equal(allowed(join(realpathSync(f.platform), 'packages', 'plugins', 'draft')), true)
+  assert.equal(allowed(join(realpathSync(f.workspace), 'unrelated-checkout')), false)
+  assert.equal(allowed(join(realpathSync(f.platform), 'apps')), false)
+})
+
+test('a workspace root that already contains built-in plugins needs no extra allowlist root', (t) => {
+  const f = fixture(t)
+  f.run()
+  const roots = f.read('.env').match(/^PLUGIN_WORKSPACE_ROOTS=(.+)$/m)[1].split(',')
+  assert.equal(roots.length, 1)
 })
 
 test('existing source configuration is preserved byte for byte on repeated setup', (t) => {

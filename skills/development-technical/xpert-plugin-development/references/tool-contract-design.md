@@ -59,6 +59,10 @@ Treat the tool schema as an untrusted-boundary contract, not as documentation on
 10. Include `baseRevision` or an equivalent compare-and-swap token when a mutation is planned from prior state. For service-owned current-draft tools, accept `baseRevision` as audit/planning context while the service still reads the authoritative current revision and writes through compare-and-swap. Allow `expectedRevision` on multi-step reads so an Agent can reject stale planning data.
 11. Accept files through the platform's runtime file descriptor or portable file-reference contract. Do not accept base64 blobs, host filesystem paths, publicized internal URLs, or caller-supplied volume scope fields.
 12. Set `verboseParsingErrors: true` on every LangChain structured tool so invalid model arguments return actionable validation details.
+    Schema rejection happens before the handler. Test malformed input through the
+    real tool boundary and accept the framework's validation error contract;
+    do not require a handler-owned business-error DTO for input the handler never
+    receives. Keep business errors inside the validated handler contract.
 13. Keep MCP `inputSchema` equally strict and bounded. When declaring `outputSchema`, keep it aligned with the actual `structuredContent` DTO.
 14. Decorated host-native MCP Tools require both input and output to be strict Zod object schemas. Invalid provider descriptors or runtime output must fail registration/execution; never silently strip unexpected response fields.
 

@@ -88,7 +88,7 @@ The Queue job and Assistant execution have separate cancellation surfaces. Cance
 
 ## Idempotency and recovery
 
-Use an operation ID plus expected domain revision as the logical idempotency key. Protect launch with a unique constraint, atomic status transition, or scoped lock so duplicate Queue deliveries cannot start the same professional Agent twice.
+Use an operation ID plus expected domain revision as the logical idempotency key. Protect launch with a unique constraint, atomic status transition, or scoped lease so duplicate Queue deliveries cannot start the same professional Agent twice. Follow [Database Access and Transaction Boundaries](database-access-and-transactions.md): use supported platform atomic claims, finish database work before capability calls, and never serialize external work by holding a database transaction/row lock. Do not let duplicate workers consume the shared connection pool waiting for a lock held across external work.
 
 Persist every external handle before scheduling downstream work. On restart, reload nonterminal domain tasks and call `getTaskStatus` with all known Assistant Task handles. Interpret results conservatively:
 

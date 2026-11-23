@@ -99,7 +99,7 @@ Separate tool schemas from persistence entities. Map the validated input into a 
 
 ## Set transaction boundaries
 
-Keep one database transaction aligned with one model-visible semantic operation:
+Follow [Database Access and Transaction Boundaries](database-access-and-transactions.md). Express one model-visible semantic operation through a supported platform atomic command; do not implement an arbitrary transaction callback in the plugin. The platform's short database transaction should cover only the required local persistence steps:
 
 1. lock or compare the current target revision;
 2. resolve and validate related records inside tenant/organization scope;
@@ -112,7 +112,7 @@ Keep one database transaction aligned with one model-visible semantic operation:
 
 When `finalizeWorkUnit: true`, save the final item and work-unit completion atomically. Never persist the item, emit success, and then separately attempt completion. Never mark a work unit complete before the item write is durable.
 
-Keep cross-resource publication or external side effects outside an unbounded database transaction. Use an outbox/job pattern where atomic local state and eventual external delivery are required.
+Keep cross-resource publication, platform capability calls, and external side effects outside every database transaction, including transactions with timeouts. Use a supported atomic outbox/job command where local state and durable delivery intent must commit together; perform delivery after commit. If the host lacks the required command, identify the capability gap without splitting atomic state into independent writes; follow the legacy migration guidance in the database reference.
 
 ## Handle concurrency and retries
 
