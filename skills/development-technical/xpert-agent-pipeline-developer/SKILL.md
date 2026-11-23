@@ -141,6 +141,8 @@ Pure refactors or mechanical maintenance that provably do not change product beh
 
 Read [validation-release-and-acceptance.md](references/validation-release-and-acceptance.md). Verify source contracts, graph semantics, plugin metadata, Assistant templates, task execution, persistence, permissions, selected delivery surfaces, installation, and publication as separate layers.
 
+For a remote pipeline archive, use the platform’s [`plugin:deploy:archive` command](../xpert-plugin-development/SKILL.md#deployment-and-verification) before verifying the organization’s role Assistants and business flow.
+
 Use an existing implementation as architectural evidence only when the user is authorized to access it in the current environment. Extract domain-independent principles into the approved blueprint; never make this skill or its generated application depend on private reference source, machine-specific paths, customer data, or undocumented implementation details.
 
 ## Non-Negotiable Invariants

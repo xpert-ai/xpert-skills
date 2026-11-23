@@ -21,6 +21,7 @@ Keep this skill to decisions, pitfalls, and lookup pointers. Inspect current SDK
 ## Deployment and verification
 
 - For local deployment, prove the selected platform is ready; use `xpert-platform-local-environment` if identity or health is uncertain. Prefer `plugin:deploy:local` at the plugin-declared scope.
+- From the platform checkout, run `corepack pnpm plugin:deploy:archive publish "$ARCHIVE"`, then `corepack pnpm plugin:deploy:archive verify "$ARCHIVE"` after rollout. See `corepack pnpm plugin:deploy:archive --help` for environment inputs and the optional smoke check.
 - Build generated assets before browser acceptance; check freshness with `verify:dist` and inspect the actual package. Run relevant contract tests and dist-first lifecycle loading.
 - Staged is not running: honor `restartRequired` and descriptor `pending_restart`, then verify a live capability. Plugin deployment does not initialize/publish Assistant templates; that is a separate lifecycle.
 - For suite updates, prefer `assistant:suite:init --refresh` with the prior installation receipt; use `--resume` for interrupted releases. Read [the release workflow](references/local-release-and-assistant-suite.md) for all-role dependency ordering, binding preservation, and activation recovery.

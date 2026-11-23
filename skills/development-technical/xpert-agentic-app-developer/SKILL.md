@@ -487,7 +487,7 @@ The second command securely prompts for the password. `plugin:deploy:local` read
 
 If credentials are missing or incomplete, stop before mutation, show the Keychain commands above, and wait for confirmation before retrying. Never inspect browser Local Storage, cookies, network headers, or shell history for credentials, and never ask the user to paste a password or token into chat or a repository file. Treat a login `401` as invalid credentials; treat an install or refresh `401` as an expired JWT and retry the normal login path without printing any secret.
 
-Do not manually copy or edit the host plugin staging directory. If runtime behavior remains stale after a successful deployment, restart the local API and rerun `plugin:deploy:local`. For production, either publish the plugin as an npm/internal artifact and install it through the platform plugin flow, or include it as a platform-owned built-in system plugin when that is truly intended.
+Do not manually copy or edit the host plugin staging directory. If runtime behavior remains stale after a successful local deployment, restart the local API and rerun `plugin:deploy:local`. For remote archives, use the platform’s [`plugin:deploy:archive` command](../xpert-plugin-development/SKILL.md#deployment-and-verification). Registry distribution and platform-owned built-in plugins use their respective host release workflows.
 
 If the plugin also has an explicitly requested MCP surface, validate that surface with the dedicated Xpert plugin development MCP guidance; keep that validation separate from the Workbench extension view flow.
 
