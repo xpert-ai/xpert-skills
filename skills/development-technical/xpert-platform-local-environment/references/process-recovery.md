@@ -22,6 +22,26 @@ new instance identity and verify the requested feature there. Preserve project
 source and failure evidence. If neither recovery nor fresh setup can run within
 the available scope/capability, report that concrete limitation to the coordinator.
 
+For `runtime.startup.recovery-required`, repair the reported dependency or plugin
+first. A normal restart intentionally does not retry the same blocked candidate.
+If the selected checkout provides `retry-plugin-startup --help`, read `status`'s
+`pluginStartup` list and use the exact snapshot filename and SHA-256:
+
+```bash
+python3 <platform>/tools/local-environment/cli.py --platform <platform> --state <state> --project-root <project-root> \
+  retry-plugin-startup --snapshot <replica-state.json> --expected-sha256 <digest>
+python3 <platform>/tools/local-environment/cli.py --platform <platform> --state <state> --project-root <project-root> \
+  start --service api
+```
+
+This requires a verified Supervisor in a project-exclusive instance. It stops
+only that API, checks the stopped process/port and unchanged snapshot, retains
+the private original and prepares one retry without bypassing plugin validation.
+It does not modify desired plugin configuration, admitted versions or database
+contents. Keep its secret-free receipt; never export the private snapshot backup.
+If the checkout lacks this command, use the supported recovery/fresh-instance
+options above; do not inject helpers into a frozen trial.
+
 ## Before installation
 
 Start from a healthy initialized instance. Keep code, artifacts and task evidence
