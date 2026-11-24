@@ -46,7 +46,7 @@ Keep the Agent moving through non-blocking work:
 - In prompts, tell the Agent to continue through authorized read-only, draft, diagnostic, and safely reversible steps without asking for confirmation at every stage.
 - Return compact status, warnings, assumptions, changed counts, and the next automatic step from tools. Use a distinct `confirmation_required` state only when policy actually requires a human decision.
 - Do not add `confirmed: true`, approval tokens, or mandatory dry-run calls to ordinary reads, previews, draft writes, or reversible mutations.
-- When explicit confirmation is required, bind it to the exact target, action, revision, and consequence; revalidate authorization and current state on execution.
+- When explicit confirmation is required, bind it to the exact target, action, and consequence. For reviewed content, use its existing immutable proposal, snapshot, or result version. Revalidate authorization and the applicable preconditions on execution. If the content awaiting approval has changed, obtain fresh confirmation.
 - Let the Agent summarize passive information after acting instead of pausing before acting.
 - When several items share one approved transaction, confirm the transaction once rather than each item. Keep item-level review only where each item is an independent business decision.
 - Keep uncertainty visible. Do not convert low confidence into a forced confirmation unless accepting that uncertainty has a material consequence.

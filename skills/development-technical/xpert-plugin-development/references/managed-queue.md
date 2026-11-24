@@ -65,9 +65,9 @@ Treat enqueue identity as part of the durable job contract:
 - `tenantId` and `organizationId` isolate plugin data and platform capabilities.
 - `scopeKey` routes the job to the processor registered for the matching plugin installation.
 - `userId` preserves the business actor for capabilities that require user authority.
-- Domain identifiers and revisions belong in the bounded payload, not in ambient request state.
+- Carry domain and attempt identifiers in the bounded payload. Include an input version only for work tied to that version.
 
-Read the processor's `ManagedQueueJobContext` as the authoritative restored queue ownership. A handler must be able to run after the originating HTTP request and process have ended. Reload current domain objects by ID, revalidate tenant/organization scope, and reject stale revisions before mutation.
+Read the processor's `ManagedQueueJobContext` as the authoritative restored queue ownership. A handler must be able to run after the originating HTTP request and process have ended. Reload current domain objects by ID, revalidate tenant/organization scope, and enforce the operation’s state or version precondition when mutating.
 
 Do not enqueue tokens, credentials, Request objects, service instances, ORM entities, full snapshots, file bytes, temporary URLs, or server paths. Store portable references and stable IDs only.
 
@@ -76,8 +76,8 @@ Do not enqueue tokens, credentials, Request objects, service instances, ORM enti
 Use Managed Queue as the durable scheduler when a plugin workflow starts a professional Agent through `AssistantTaskRuntimeCapability`:
 
 1. Create a plugin-owned domain task and immutable execution-attempt record.
-2. Enqueue the domain task ID, expected revision, operation ID, Agent role key, and bounded policy parameters.
-3. Atomically claim the queued domain revision in the processor.
+2. Enqueue the domain task ID, operation or attempt ID, Agent role key, and bounded policy parameters. Include the pinned input reference for version-specific work.
+3. Atomically claim the queued attempt by identity and status. For work that must still target the active input version, check that version in the same claim.
 4. Call `startTask` with the installed Assistant ID and stable published `agentKey`.
 5. Persist the returned platform `taskId`, `conversationId`, `threadId`, and `executionId` separately from the plugin domain task ID.
 6. End the processor invocation; supervise completion through later jobs, domain finalize events, or bounded `getTaskStatus` reconciliation.
@@ -88,16 +88,16 @@ The Queue job and Assistant execution have separate cancellation surfaces. Cance
 
 ## Idempotency and recovery
 
-Use an operation ID plus expected domain revision as the logical idempotency key. Protect launch with a unique constraint, atomic status transition, or scoped lease so duplicate Queue deliveries cannot start the same professional Agent twice. Follow [Database Access and Transaction Boundaries](database-access-and-transactions.md): use supported platform atomic claims, finish database work before capability calls, and never serialize external work by holding a database transaction/row lock. Do not let duplicate workers consume the shared connection pool waiting for a lock held across external work.
+Use a stable, scoped operation ID to deduplicate delivery of the same attempt. Bind it to the original inputs so a delayed delivery cannot claim a later attempt. Protect launch with a unique constraint, atomic status transition, or scoped lease so duplicate Queue deliveries cannot start the same professional Agent twice. Follow [Database Access and Transaction Boundaries](database-access-and-transactions.md): use supported platform atomic claims, finish database work before capability calls, and never serialize external work by holding a database transaction/row lock. Do not let duplicate workers consume the shared connection pool waiting for a lock held across external work.
 
 Persist every external handle before scheduling downstream work. On restart, reload nonterminal domain tasks and call `getTaskStatus` with all known Assistant Task handles. Interpret results conservatively:
 
 - `queued` or `running`: keep supervising.
-- `succeeded`: require the expected domain finalizer/version before marking business success.
+- `succeeded`: require the expected domain finalizer for the active attempt and its pinned inputs before marking business success.
 - `failed` or `interrupted`: record a safe failure summary and apply the domain retry budget.
 - `unknown` or no result: keep the task recoverable; never infer success.
 
-Assistant execution completion and domain completion are different signals. A professional Agent should finalize through a controlled middleware tool that validates scope, revision, evidence, and completeness. If the execution ends without that finalizer, fail or recover the domain task instead of advancing the workflow.
+Assistant execution completion and domain completion are different signals. A professional Agent should finalize through a controlled middleware tool that validates scope, active attempt, evidence, completeness, and any required input version. If the execution ends without that finalizer, fail or recover the domain task instead of advancing the workflow.
 
 Keep old attempts as immutable execution records. A retry creates a new attempt and new Assistant execution handles; it must not overwrite the audit trail of the previous run.
 
@@ -129,7 +129,7 @@ try {
 
 Plugins still own business observability: message logs, account status, integration health, and user-visible failure reasons.
 
-For Agent-orchestrated jobs, also expose the professional Agent role, attempt number, domain revision, Assistant execution status, finalize status, and conversation/thread/execution handles needed for an authorized View to open the execution record.
+For Agent-orchestrated jobs, also expose the professional Agent role, attempt number, domain version when relevant, Assistant execution status, finalize status, and conversation/thread/execution handles needed for an authorized View to open the execution record.
 
 ## Migration checklist
 
@@ -140,7 +140,7 @@ For Agent-orchestrated jobs, also expose the professional Agent role, attempt nu
 5. Move Redis state and locks to platform Redis.
 6. Scope all Redis keys by tenant/org/integration or equivalent.
 7. Capture `userId` when the job requires user authority, and consume the restored `ManagedQueueJobContext` in processors.
-8. Ensure handlers can run without an HTTP request and revalidate scope plus revision from persisted state.
+8. Ensure handlers can run without an HTTP request and revalidate scope and the operation’s preconditions against persisted state.
 9. For Assistant Task jobs, persist platform execution handles separately, reconcile nonterminal runs, and require domain finalization before success.
 10. Drain old physical queues before production rollout; do not add compatibility consumers unless explicitly requested.
 

@@ -35,7 +35,7 @@ Use these rules whenever creating or reviewing Xpert Agent middleware tools, nor
 2. Prefer narrow operations such as `get_project_summary`, `list_clips`, `get_clip`, and `update_clip_timing` over `execute`, `manage`, or whole-document replacement tools.
 3. Separate reads from mutations. Never hide writes inside a tool described as a read.
 4. Require explicit identifiers for the business object being addressed. Allow an identifier to be omitted only when a trusted host context can resolve exactly one current object.
-5. Return a mutation receipt rather than the new full object graph: include identifiers, new revision, status, changed object IDs, and the next useful action.
+5. Return a mutation receipt rather than the new full object graph: include identifiers, status, changed object IDs, and the next useful action. Include the resulting version when the caller needs it.
 6. Do not echo the complete input payload in the result.
 
 ## Validate every input with a strict schema
@@ -56,7 +56,7 @@ Treat the tool schema as an untrusted-boundary contract, not as documentation on
 7. Validate cross-field invariants with `.refine()` or `.superRefine()`: `end > start`, mutually exclusive selectors, compatible modes, matching revisions, and conditional required fields.
 8. Keep context-derived security fields out of model input. Resolve tenant, organization, user, workspace, Xpert, conversation, roles, tokens, and credentials from the authenticated runtime.
 9. Resolve an omitted current business ID from trusted Workbench/runtime context before handler execution, then validate the resolved value. Return an actionable error when no unambiguous current object exists.
-10. Include `baseRevision` or an equivalent compare-and-swap token when a mutation is planned from prior state. For service-owned current-draft tools, accept `baseRevision` as audit/planning context while the service still reads the authoritative current revision and writes through compare-and-swap. Allow `expectedRevision` on multi-step reads so an Agent can reject stale planning data.
+10. For edits that depend on content already read, carry its version from that read or its trusted runtime context. Use an existing snapshot or version ID where available. Multi-step reads can carry the same token when they need a consistent view.
 11. Accept files through the platform's runtime file descriptor or portable file-reference contract. Do not accept base64 blobs, host filesystem paths, publicized internal URLs, or caller-supplied volume scope fields.
 12. Set `verboseParsingErrors: true` on every LangChain structured tool so invalid model arguments return actionable validation details.
     Schema rejection happens before the handler. Test malformed input through the
@@ -75,7 +75,6 @@ export const listClipsSchema = z.object({
   projectId: z.string().uuid().optional().describe(
     'Project UUID. Omit only when the active Workbench supplies the current project.'
   ),
-  expectedRevision: z.number().int().positive().optional(),
   trackIds: z.array(z.string().min(1).max(160)).min(1).max(50).optional(),
   start: z.number().min(0).max(86_400).optional(),
   end: z.number().positive().max(86_400).optional(),
@@ -225,11 +224,11 @@ Use an explicit mapper instead of a class when that is simpler; the rule is fiel
 
 Design reads as a hierarchy:
 
-1. `get_*_summary`: return identity, status, revision, settings, counts, and available follow-up reads.
+1. `get_*_summary`: return identity, status, settings, counts, and available follow-up reads. Include a version when a follow-up needs it.
 2. `list_*`: return bounded summaries with filters and pagination.
 3. `get_*`: return one exact item after its ID has been discovered.
 4. specialized evidence/detail tools: return expensive or large subresources only when needed.
-5. mutation tools: accept exact IDs plus the current revision and return a compact receipt.
+5. mutation tools: accept the target ID and the preconditions needed for that operation. Return a compact receipt.
 
 Keep nested collections out of parent summaries. For example, return track and clip counts from a project summary, list tracks separately, list clips by track/time/type, then get one clip. Include fields such as `availableReads`, `nextAction`, or related IDs only when they genuinely help the Agent choose the next bounded call.
 
@@ -252,31 +251,37 @@ Do not make `get_project` return the complete timeline, every media record, ever
 2. Treat MCP identity according to the Toolset/runtime session contract. Never trust model-provided tenant or user IDs as authorization evidence.
 3. Scope every query by tenant and organization before business IDs. Verify the resource relationship and permission again in the handler/service; a valid UUID is not authorization.
 4. Keep internal paths/references server-side. Return an approved grant, artifact, or other purpose-specific handle only when the user-facing operation needs it.
-5. Require optimistic concurrency on mutations and return a stable conflict code plus the current revision. Do not let the model silently overwrite or rebase state.
+5. Omit `revision` by default. Enforce the operation’s actual precondition atomically at the write boundary.
+
+   - Append an independent Case note directly. A stable `operationId` can deduplicate a retried submission while concurrent notes remain valid.
+   - Claim a task with a scoped conditional update on `status = 'queued'` when eligibility depends only on that state. Check the affected-row count.
+   - Save edits derived from a particular draft against the version the editor read. On mismatch, return a stable conflict code and the current version so the caller can reread and decide.
+   - Bind approval, publication of reviewed content, and acceptance to the exact proposal, snapshot, or result version reviewed. Reuse its immutable ID. If the content awaiting that decision changes, require a new review or confirmation.
+
 6. Normalize not-found, unauthorized, expired, and cross-scope failures when revealing existence would leak data.
 7. Require explicit confirmation or the platform HITL mechanism for destructive, externally visible, financial, publication, or sharing actions.
 
 ## Design revisioned draft mutations
 
-Use this pattern for Agent tools that edit drafts, semantic models, configuration documents, design canvases, or other user-reviewable resources.
+Use this pattern when concurrent edits to a draft, semantic model, configuration document, or design canvas could overwrite content used to plan an edit.
 
 1. Let the Agent express intent while the service owns revision, concurrency, validation, and persistence. Prefer high-level intent tools such as `add_measure`, `configure_relationship`, or `update_step` over model-authored whole-document saves.
 2. Expose a small workflow: `get_*_context` for current revision, object indexes, counts, validation summary, and busy state; `get_*_schema` or `get_*_capabilities` before referencing new fields/actions; narrow intent mutation tools for common changes; raw patch only as a fallback for unsupported edits.
-3. Put `targetId`, optional `operationId`, and optional `baseRevision` on every draft mutation. Add bounded `changeSummary` only when the mutation needs a runtime-specific display description, following [Design ChatKit titles and change summaries](#design-chatkit-titles-and-change-summaries). Resolve omitted current target IDs only from trusted Workbench/runtime state.
-4. Treat `baseRevision` as planning context and audit evidence, not as a model-owned lock. The service should read the current authoritative draft when applying the mutation.
+3. Identify the target with `targetId`. A replayable edit can carry an `operationId`. Add bounded `changeSummary` only when the mutation needs a runtime-specific display description, following [Design ChatKit titles and change summaries](#design-chatkit-titles-and-change-summaries). Resolve omitted current target IDs only from trusted Workbench/runtime state.
+4. For a save based on an earlier read, require its `expectedRevision` or equivalent token and compare it at persistence. A current-draft intent may carry `baseRevision` for planning or audit when the service can apply the intent to current content.
 5. Make `operationId` idempotent. Store the compact mutation receipt for the last or relevant operation IDs; if the same operation is retried, return the stored receipt instead of applying the change again.
 6. Apply the mutation as the smallest deterministic delta. Avoid replacing the full draft when the intent only adds or updates one field, item, relationship, or visibility flag.
 7. For JSON Patch-like raw deltas, require every `replace` or `remove` to have an immediately preceding `test` for the same path. High-level intent tools should generate those guards internally for destructive field updates.
-8. Persist through compare-and-swap: read current draft, apply the delta, validate the resulting draft, save only if the stored revision still matches, and return a compact receipt with `revision`, changed paths/object IDs, operation count, validation summary, and stable conflict/busy codes.
-9. Allow at most one service-owned safe rebase when the delta is guarded, idempotent, and scoped to a small intent. Report `rebasedFromRevision` or an equivalent field in the receipt. Do not let the Agent loop indefinitely; after a failed precondition or busy draft, re-read context and retry at most once.
-10. Choose the draft write strategy by the plugin's existing collaboration substrate. If the plugin already implements Yjs/CRDT collaborative editing, represent Agent changes through the same collaboration protocol: presence/focus, CRDT operations, remote-change merge, materialization, and existing conflict policy. If the plugin does not already use Yjs/CRDT, use the simplest server-draft strategy: let Agent mutations write the authoritative server draft directly and supersede browser-local or autosave drafts without checking whether the frontend has saved. Do not add locks, leases, or unsaved-draft gates solely for Agent edits. Still use `operationId`, guarded deltas, compare-and-swap, validation, and compact receipts; surface conflicts only for guarded precondition failures, genuine server busy states, authorization failures, or validation failures.
+8. For a server-owned draft, validate the delta and persist with compare-and-swap against the version used to compute it. Return the resulting revision, changed paths or object IDs, operation count, and validation summary. Use stable codes for conflicts and busy drafts.
+9. Only a current-draft intent with a guarded, idempotent delta scoped to a small change permits one service-owned rebase. Report a successful rebase with `rebasedFromRevision` or an equivalent receipt field. A failed exact-version check returns a conflict. Do not let the Agent loop indefinitely; after a failed precondition or busy draft, reread context and decide whether the edit still applies before retrying at most once.
+10. Choose the draft write strategy by the plugin's existing collaboration substrate. If the plugin already implements Yjs/CRDT collaborative editing, represent Agent changes through the same collaboration protocol: presence/focus, CRDT operations, remote-change merge, materialization, and existing conflict policy. If the plugin does not already use Yjs/CRDT, use the simplest server-draft strategy: let Agent mutations write the authoritative server draft directly and supersede browser-local or autosave drafts without checking whether the frontend has saved. Do not add locks, leases, or unsaved-draft gates solely for Agent edits. Use guarded deltas, compare-and-swap, validation, and compact receipts for server-draft edits. Report a failed version or field precondition as a conflict. Keep busy, authorization, and validation errors distinguishable.
 11. Emit running/success/fail events for every user-visible mutation that has `changeSummary`; otherwise use the localized fixed tool title. Strip `changeSummary` from ChatKit-visible structured details. Serialize writes per target resource when multiple tool calls can mutate the same draft, and let the Workbench refresh only after mutation success.
 12. Keep mutation results compact. Return receipts and diagnostics, not the full draft. Provide explicit read tools for a refreshed summary, item details, or paged content.
 
 ## Model long-running work as jobs
 
 1. Queue transcription, analysis, rendering, bulk import/export, and other long work through the platform runtime instead of blocking a tool call.
-2. Let the start tool validate and freeze the input, enqueue the job, and return `jobId`, `status`, source revision, and a polling/cancellation hint.
+2. Let the start tool validate and freeze the input, enqueue the job, and return `jobId`, `status`, the frozen input reference, and a polling/cancellation hint.
 3. Provide bounded `get_job`, `list_jobs`, and `cancel_job` tools. Keep progress, stage, timestamps, result IDs, retryability, and stable failure codes in their DTOs.
 4. Do not inline generated files or extensive logs. Return a result/artifact ID and use the platform's approved access flow.
 
@@ -297,7 +302,7 @@ Cover at least:
 2. missing required fields, unknown keys, invalid UUIDs/enums, overlong strings, oversized arrays/pages, and cross-field violations
 3. omitted current ID with and without valid host context
 4. tenant, organization, user, permission, and parent-child ownership mismatches
-5. stale `expectedRevision` and `baseRevision`
+5. applicable write preconditions: independent appends survive concurrent writes, only one claimant wins, and stale edits or approvals cannot apply to changed content
 6. stable pagination without duplicates or gaps, including equal sort keys
 7. DTO allowlisting: assert sensitive references, URLs, paths, snapshots, provider payloads, and internal fields are absent
 8. response-size behavior: a summary and one page must not grow linearly with the complete project/resource graph

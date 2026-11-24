@@ -20,7 +20,7 @@ Build a small test host when the platform does not already provide one. It shoul
 - send the real remote-component initialization envelope;
 - implement only the declared bridge messages used by the view;
 - keep an inspectable in-memory domain state for data, action, file-access, host-event, and Assistant-context requests;
-- return realistic compact DTOs, revisions, failures, and asynchronous state transitions;
+- return realistic compact DTOs, failures, and asynchronous state transitions, including versions when the production contract uses them;
 - fail the test on uncaught page errors and unexpected console errors;
 - use small deterministic media and document fixtures;
 - never embed credentials, production data, Bearer tokens, or portable Workspace references in the iframe fixture.

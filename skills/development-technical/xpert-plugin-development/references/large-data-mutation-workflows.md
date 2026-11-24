@@ -76,7 +76,6 @@ Put these fields on iterative mutations when relevant:
 ```ts
 {
   targetId: string
-  expectedRevision: number
   idempotencyKey: string
   changeSummary: string
   item: StrictSingleDomainItem
@@ -90,7 +89,7 @@ Apply these rules:
 - Require an exact target/draft/version identifier.
 - Bound and describe every string, enum, list, numeric unit, and related-record identifier.
 - Keep one semantic item in `item`; reject arrays on single-item tools.
-- Use `expectedRevision` or `baseRevision` for optimistic concurrency.
+- For edits derived from an earlier read, require the version of the content read. Independent appends can share a target without sharing a revision precondition.
 - Make `idempotencyKey` stable for the intended mutation, not regenerated on retry.
 - Keep `changeSummary` concise and user-visible for progress/audit events.
 - Use explicit optional transition flags only when the transition is coupled to the same transaction.
@@ -101,13 +100,13 @@ Separate tool schemas from persistence entities. Map the validated input into a 
 
 Follow [Database Access and Transaction Boundaries](database-access-and-transactions.md). Express one model-visible semantic operation through a supported platform atomic command; do not implement an arbitrary transaction callback in the plugin. The platform's short database transaction should cover only the required local persistence steps:
 
-1. lock or compare the current target revision;
-2. resolve and validate related records inside tenant/organization scope;
-3. detect an existing idempotency receipt;
+1. authorize the target in tenant/organization scope;
+2. return the stored receipt for a replay of the same scoped operation and payload;
+3. validate related records and enforce the applicable state or version condition atomically with the write;
 4. apply one item mutation;
 5. update derived counts, completeness metrics, and audit state;
 6. apply an optional coupled lifecycle transition;
-7. increment the revision and persist the receipt;
+7. persist the receipt, including the new version for a versioned edit;
 8. commit before emitting success events.
 
 When `finalizeWorkUnit: true`, save the final item and work-unit completion atomically. Never persist the item, emit success, and then separately attempt completion. Never mark a work unit complete before the item write is durable.
@@ -116,9 +115,9 @@ Keep cross-resource publication, platform capability calls, and external side ef
 
 ## Handle concurrency and retries
 
-Serialize mutations per target when concurrent tool calls can edit the same draft. Use compare-and-swap at persistence even when an in-process queue exists.
+Serialize mutations per target when concurrent tool calls can edit the same draft. For a version-dependent edit, compare the version at persistence even when an in-process queue exists.
 
-On duplicate `idempotencyKey`, return the stored compact receipt without incrementing counts or repeating the lifecycle transition. On a stale revision, return a stable conflict code and the current revision; instruct the Agent to re-read context and retry only the failed item. Do not silently overwrite or loop indefinitely.
+On duplicate `idempotencyKey`, return the stored compact receipt without incrementing counts or repeating the lifecycle transition. On a stale revision, return a stable conflict code and the current revision; have the Agent reread context and decide whether to retry the failed item. Do not silently overwrite or loop indefinitely.
 
 Define state-specific idempotency:
 
@@ -136,7 +135,6 @@ Return only what the Agent needs to continue:
 {
   "targetId": "...",
   "itemId": "...",
-  "revision": 12,
   "status": "completed",
   "created": true,
   "workUnitFinalized": true,
@@ -163,7 +161,7 @@ Cover at least:
 
 1. minimum and maximum single-item inputs and rejection of arrays;
 2. duplicate idempotency keys without duplicate rows or counters;
-3. stale revisions and one-item retry after re-read;
+3. independent concurrent appends, or stale-version rejection and one-item recovery for edits based on a specific version;
 4. related-record, domain-validation, tenant, and organization failures;
 5. transaction rollback when item validation or finalization fails;
 6. atomic final item plus completion and idempotent retry;
