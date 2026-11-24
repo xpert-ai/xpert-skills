@@ -12,6 +12,24 @@ Read before adding or changing plugin persistence, background task claims, quota
 
 `await` does not release a transaction's connection or locks. Duplicate jobs waiting on a row lock can exhaust the shared API connection pool while the lock owner waits for another connection. Database rollback also cannot undo an already completed external call.
 
+## Verify installed ORM identity
+
+Before using `TypeOrmModule.forFeature` or host repositories, inspect the target
+loader's supported host peers. On hosts implementing ORM peer links, declare a
+compatible `typeorm` peer and, when using Nest ORM integration, an
+`@nestjs/typeorm` peer. Keep declared ORM peers external to the bundle and use
+development dependencies for compilation; do not ship private runtime copies.
+Both `DataSource` constructor identity and Nest's entity-registration
+storage must be shared with the host, even when the versions already match.
+
+Verify this with the actual staged archive/source installation. A workspace
+symlink, broad `NODE_PATH`, or copying business code into the platform's built-in
+plugins can hide the boundary failure and does not prove portable installation.
+If the running host lacks this contract, report the platform compatibility blocker
+instead of repeatedly changing injection syntax or creating a separate connection.
+Record the actual host build that provides the links; local source changes alone
+do not establish runtime support.
+
 ## Preserve atomicity through platform capabilities
 
 Choose the smallest supported operation:

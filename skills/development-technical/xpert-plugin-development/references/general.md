@@ -371,6 +371,11 @@ dependency. The presence of Zod, NestJS or another package in the platform check
 does not promise it to an isolated installed plugin. The archive installer may
 omit peers and install only `dependencies`/`optionalDependencies`.
 
+Hosts implementing ORM peer links also provide declared, compatible `typeorm` and
+`@nestjs/typeorm` peers. Keep these packages external to the bundle and out of
+runtime dependencies; see [Database access](database-access-and-transactions.md).
+Verify that the actual running host has these links before relying on them.
+
 A clean archive check must reproduce that resolution boundary: extract the exact
 tarball, install its production dependencies, supply only the verified host peers,
 and load the shipped entry. Do not link all peerDependencies, inherit workspace
