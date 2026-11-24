@@ -124,7 +124,7 @@ The runtime still adds an `input: string` field to the sub-Agent tool. Treat it 
 Operational rules:
 
 - The parent first discovers authoritative IDs from domain reads, then supplies each one under its exact parameter name. Never copy one UUID into several fields merely to satisfy the schema.
-- Required parameters prevent omission and primitive type mismatch before the child starts. They do not prove referential integrity. Domain tools must still verify that the run belongs to the Case and baseline, that a revision is current, and that the target is writable.
+- Required parameters prevent omission and primitive type mismatch before the child starts. They do not prove referential integrity. Domain tools must still verify that the run belongs to the Case and baseline, that the target is writable, and that any required version matches.
 - Render critical parameters into the child system prompt. Declaring state channels without referencing them in a prompt or prompt template can leave the model unaware of their values.
 - Keep optional fields explicitly `optional: true`; omit them when unknown instead of inventing placeholders.
 - Current `array[string]` parameter generation validates the array and item types but does not enforce non-empty, uniqueness, or an item-count maximum. Enforce those invariants in a domain tool or an explicit preflight step, and tell the child to return `blocked` rather than guess.
@@ -135,7 +135,7 @@ Operational rules:
 Include:
 
 - `taskId` or correlation ID;
-- target business ID and expected revision;
+- target business ID and, for work based on specific content, the version or snapshot from the original read;
 - exact objective and completion condition;
 - bounded field/item/source IDs;
 - missing, invalid, low-confidence, or conflicting states to resolve;
@@ -211,7 +211,7 @@ Do not copy source text, complete search results, full model objects, or interna
 
 ## Control lifecycle and failure
 
-- Make child writes idempotent and revision-aware.
+- Make child writes idempotent. Enforce state transitions and version-dependent edits with their respective preconditions.
 - Serialize parent and child mutations to the same target or give them non-overlapping ownership.
 - Bound search depth, pagination, retries, and recursive delegation.
 - Define zero-result and partial-result behavior; a clean “not found in approved sources” result is valid.
@@ -234,7 +234,7 @@ Verify:
 6. provider keys and modes match the intended exact tool lists;
 7. one bounded execution produces the expected parent-to-child call tree;
 8. persisted outputs match the compact child receipt;
-9. retries do not duplicate writes and stale revisions are recoverable;
+9. retries do not duplicate writes and version-dependent edits surface conflicts for reassessment;
 10. no child tool call violates human approval or role boundaries;
 11. source template, installed draft, published graph, and fresh conversation agree.
 

@@ -29,7 +29,9 @@ Plugin installation and Assistant authoring can use different scopes in the same
 
 Assistant suite operations use the target workspace's organization scope. Construct separate headers for the two phases; do not change a system plugin to organization scope because its business workspace belongs to an organization.
 
-## Deploy The Plugin
+## Deploy The Plugin Locally
+
+For remote archives, use the platform’s [`plugin:deploy:archive` command](../SKILL.md#deployment-and-verification).
 
 Run from the selected platform repository. `XPERT_API_URL` is the API origin, not its health endpoint.
 

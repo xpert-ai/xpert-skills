@@ -44,7 +44,7 @@ Require every specialist subagent to:
 - exist as a real child Agent node in the published Assistant graph;
 - declare a stable `agentKey`, a valid `leaderKey`, and exactly one intended incoming Agent connection from its parent;
 - connect directly only to the middleware, tools, Skills, and knowledge sources required by its role;
-- use structured `entity.parameters` for correctness-critical identifiers, expected revisions, and bounded collections;
+- use structured `entity.parameters` for correctness-critical identifiers, bounded collections, and any required input version;
 - define the read, begin-draft, batch-write, finalize, and failure-reporting order in its prompt;
 - return compact results or persisted references instead of copying full documents through the parent layer;
 - use an appropriate mute path for internal work while preserving the execution tree and compact result.
@@ -121,22 +121,22 @@ type SpecialistSubagentExecutionLink = {
 
 Persist every handle returned by `startTask` immediately. For later status checks, prefer `executionId` and include the known `conversationId`, `threadId`, `assistantTaskId`, and `xpertId` as recovery identifiers.
 
-Create an immutable execution-attempt record for every launch instead of overwriting only the latest values on the domain task. Record at least the sequence, specialist subagent key, start and finish times, status, attempt number, input revision, output revision, conversation/thread/execution handles, and a safe failure summary.
+Create an immutable execution-attempt record for every launch instead of overwriting only the latest values on the domain task. Record at least the sequence, specialist subagent key, start and finish times, status, attempt number, conversation/thread/execution handles, and a safe failure summary. Record the exact input or output version for version-specific work.
 
 ## Managed Queue Orchestration
 
 Use Managed Queue to launch specialist subagents without making an HTTP handler or View action wait for the complete model execution:
 
 1. Create the domain task, operation ID, and execution-attempt record.
-2. Enqueue tenant, organization, installation scope, user, domain task ID, and expected revision.
-3. Atomically claim the current `queued` domain revision in the processor.
+2. Enqueue tenant, organization, installation scope, user, domain task ID, and the operation or attempt ID. Include the pinned input reference for version-specific work.
+3. Atomically claim the identified `queued` attempt. If launch requires a particular input version to remain current, enforce that condition in the same claim.
 4. Call `AssistantTaskRuntimeCapability.startTask` with the stable specialist subagent key.
 5. Persist the returned platform execution handles and finish the short processor invocation.
 6. Advance the workflow through a later supervision job, a domain finalize event, or bounded status reconciliation.
 
 Keep Queue payloads bounded and replayable. Store IDs, revisions, operation IDs, and policy parameters only. Reload current domain state from persistence in every processor invocation; do not enqueue complete snapshots, file bytes, temporary access URLs, or server paths.
 
-Apply concurrency control at two layers. Use Managed Queue processor concurrency to limit launch rate within a process, and use a unique constraint, atomic claim, or scoped lock to ensure one logical domain task revision starts only one specialist subagent execution.
+Apply concurrency control at two layers. Use Managed Queue processor concurrency to limit launch rate within a process, and use a unique constraint, atomic claim, or scoped lock to ensure a logical attempt starts only one specialist subagent execution.
 
 ## Completion, Recovery, and Cancellation
 
@@ -155,11 +155,11 @@ const status = await assistantTasks.getTaskStatus?.({
 Interpret status conservatively:
 
 - Keep `queued` and `running` as nonterminal and continue bounded supervision.
-- Treat `succeeded` as platform execution completion only; require the expected domain finalizer and active revision before declaring business success.
+- Treat `succeeded` as platform execution completion only; require domain finalization for the active attempt and its pinned inputs before declaring business success.
 - Persist a safe failure summary for `failed` or `interrupted`, then apply the domain retry budget.
 - Keep `unknown` or `null` recoverable. Never infer success or produce an official downstream artifact.
 
-Use the domain finalizer as the authoritative success signal. Require the specialist subagent to submit output through a controlled finalize tool that validates scope, revision, evidence, and completeness. If the Assistant execution ends without producing a valid domain version, fail or recover the domain task instead of advancing the workflow.
+Use the domain finalizer as the authoritative success signal. Require the specialist subagent to submit output through a controlled finalize tool that validates scope, active attempt, evidence, completeness, and any required input version. If the Assistant execution ends without finalizing the expected domain result, fail or recover the domain task instead of advancing the workflow.
 
 Cancel Queue work and Assistant execution separately:
 
@@ -182,8 +182,8 @@ Treat execution records as an audit trail, not as decorative loading indicators.
 - Verify every specialist subagent has the intended parent, `leaderKey`, incoming Agent connection, and least-privilege capability set.
 - Keep domain task IDs separate from platform Assistant Task IDs.
 - Persist every conversation/thread/execution handle returned by `startTask`.
-- Keep Queue payloads bounded, replayable, and scoped by tenant, organization, installation, user, and revision.
-- Prevent duplicate Queue delivery from launching the same domain task revision twice.
+- Keep Queue payloads bounded, replayable, and scoped by tenant, organization, installation, user, and task attempt.
+- Prevent duplicate delivery from launching an attempt twice or claiming its replacement.
 - Refuse to treat Assistant execution completion as business success when domain finalization is missing.
 - Recover nonterminal tasks from persisted handles after restart and apply bounded retry and cancellation rules.
 - Open the exact ChatKit execution from each authorized View execution record through the public Client Command.

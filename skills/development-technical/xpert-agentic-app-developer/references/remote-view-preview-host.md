@@ -62,7 +62,7 @@ export default {
     }
     if (message.type === 'executeAction') {
       state.items.push(message.input)
-      return { result: { success: true, revision: state.items.length } }
+      return { result: { success: true } }
     }
     throw new Error(`Unsupported preview request '${message.type}'.`)
   }

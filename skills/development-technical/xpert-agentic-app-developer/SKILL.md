@@ -236,7 +236,7 @@ Tool design rules:
 - Include required `technicalAttributes` / `differences` arrays, or domain equivalents, even when empty.
 - Require source evidence for important extracted values.
 - Provide a failure-reporting tool for unreadable files or incomplete parsing.
-- Return compact operation DTOs by default: business id, revision/status, a human message, changed ids/counts, blocking diagnostics, and the next recovery action. Never return a full document, scene, IR, binary payload, or complete history from a mutation or validation tool. Expose full content only through an explicit paged/item-level read tool.
+- Return compact operation DTOs by default: business ID, status, a version when a later operation needs it, a human message, changed ids/counts, blocking diagnostics, and the next recovery action. Never return a full document, scene, IR, binary payload, or complete history from a mutation or validation tool. Expose full content only through an explicit paged/item-level read tool.
 - Follow the Tool Contract Design display contract: use localized `metadata.toolName` as the default title, require bounded `changeSummary` only for genuinely dynamic business descriptions, and never expose `changeSummary` in ChatKit structured details.
 - Define the tool-family default icon once on the owning middleware strategy's `meta.icon`; use `metadata.toolIcon` only for a semantically distinct tool override. Never set the host-reserved `middlewareIcon` directly or hardcode business tool-name icon mappings in ChatKit.
 - Await every asynchronous service call before serializing the tool result. Never pass a live Promise to `JSON.stringify` or detach a rejecting Promise from the tool invocation.
@@ -489,7 +489,7 @@ The second command securely prompts for the password. `plugin:deploy:local` read
 
 If credentials are missing or incomplete, stop before mutation, show the Keychain commands above, and wait for confirmation before retrying. Never inspect browser Local Storage, cookies, network headers, or shell history for credentials, and never ask the user to paste a password or token into chat or a repository file. Treat a login `401` as invalid credentials; treat an install or refresh `401` as an expired JWT and retry the normal login path without printing any secret.
 
-Do not manually copy or edit the host plugin staging directory. If runtime behavior remains stale after a successful deployment, restart the local API and rerun `plugin:deploy:local`. For production, either publish the plugin as an npm/internal artifact and install it through the platform plugin flow, or include it as a platform-owned built-in system plugin when that is truly intended.
+Do not manually copy or edit the host plugin staging directory. If runtime behavior remains stale after a successful local deployment, restart the local API and rerun `plugin:deploy:local`. For remote archives, use the platform’s [`plugin:deploy:archive` command](../xpert-plugin-development/SKILL.md#deployment-and-verification). Registry distribution and platform-owned built-in plugins use their respective host release workflows.
 
 If the plugin also has an explicitly requested MCP surface, validate that surface with the dedicated Xpert plugin development MCP guidance; keep that validation separate from the Workbench extension view flow.
 

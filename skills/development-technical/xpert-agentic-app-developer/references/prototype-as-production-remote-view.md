@@ -71,7 +71,7 @@ Define the runtime boundary before drawing detailed screen states:
 4. JSON actions and file actions, including success and structured failure results.
 5. Allowed client commands and their failure behavior.
 6. Forwarded host events and refresh or merge behavior.
-7. Locale, theme, density, permissions, and revision fields.
+7. Locale, theme, density, permissions, and version fields used by the action contract.
 
 Use concrete TypeScript types for these contracts. The UI-facing gateway must expose the same method signatures in preview and production. Prefer stable result codes plus structured parameters to preview-only prose errors.
 
@@ -85,7 +85,7 @@ The fixture must:
 
 - return the same compact DTO shapes as the real View Provider;
 - accept the same query, action, file-action, client-command, and host-event envelopes that the screen uses;
-- enforce useful revision, validation, and transition rules rather than returning success unconditionally;
+- enforce the production validation rules and the action’s state or version preconditions;
 - mutate authoritative in-memory state for successful operations;
 - expose deterministic state for browser assertions and reload checks;
 - contain synthetic, non-sensitive data only;
@@ -95,7 +95,7 @@ For an authoritative mutation, the expected path is:
 
 ```text
 user action -> executeAction -> fixture validates and mutates state
-            -> structured result with revision -> UI requests fresh data
+            -> structured action receipt -> UI requests fresh data
             -> refreshed state remains after iframe reload
 ```
 
@@ -110,7 +110,7 @@ Prototype and review the states that materially affect structure or user decisio
 - empty with an actionable next step;
 - field validation and action failure;
 - permission denied or capability unavailable;
-- stale revision or concurrent update conflict;
+- stale revision or concurrent update conflict for actions with those preconditions;
 - long-running, retryable, cancelled, and completed execution where applicable;
 - disabled, read-only, and pending-review controls;
 - long labels, large counts, dense tables, and constrained width;

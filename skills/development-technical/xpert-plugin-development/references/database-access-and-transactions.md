@@ -4,7 +4,7 @@ Read before adding or changing plugin persistence, background task claims, quota
 
 ## Default plugin boundary
 
-- Use scoped ORM repositories for ordinary operations on plugin-owned entities and verified platform data capabilities for host-owned data or atomic domain commands. Preserve tenant/organization scope, authorization, revisions, and bounded query sizes.
+- Use scoped ORM repositories for ordinary operations on plugin-owned entities and verified platform data capabilities for host-owned data or atomic domain commands. Preserve tenant/organization scope, authorization, operation-specific write preconditions, and bounded query sizes.
 - Do not introduce plugin-owned transaction lifecycles: `DataSource.transaction`, `EntityManager.transaction`, `repository.manager.transaction`, `QueryRunner.startTransaction`/`commitTransaction`/`rollbackTransaction`, or SQL `BEGIN`/`COMMIT`/`ROLLBACK`.
 - Do not bypass this boundary through aliases, helper wrappers, a separate database connection/pool, raw `.query()` calls, or unrestricted SQL passed through a QueryBuilder. ORM query builders for scoped, parameterized entity queries remain usable under the host's supported contract.
 - Do not treat a full TypeORM Repository as a restricted capability: its manager and related objects can expose transaction and raw SQL entry points. Avoid those entry points even when the SDK makes them accessible. An ORM operation may internally use a transaction; the restriction is on plugin-controlled transaction lifetimes, not database atomicity itself.
@@ -34,7 +34,7 @@ do not establish runtime support.
 
 Choose the smallest supported operation:
 
-- Single-row changes: scoped ORM writes, unique constraints, and explicit conditional updates using the expected revision; inspect the affected-row result. Separate reads and writes are not an atomic claim.
+- Single-row changes: use scoped ORM writes and the constraints required by the command. For a conditional update, match the required state or exact content version in the write itself and inspect the affected-row count.
 - Multi-record changes: an existing typed platform domain command or bounded atomic operation contract, with the platform owning the short database transaction.
 - Task claims and quotas: an existing atomic claim/reservation capability with stable operation IDs and retry semantics. A plugin-local transaction wrapper is not a platform capability.
 - Reliable external delivery: atomically persist business state plus durable delivery intent through a supported platform command, then dispatch after commit and reconcile using the operation ID.
@@ -48,7 +48,7 @@ For workflows with external calls, use this shape:
 ```text
 platform atomic claim / revision check / quota reservation -> commit
 external work with bounded timeouts and a stable idempotency key
-platform conditional result write using current ownership and revision -> commit
+platform conditional result write using current ownership and applicable input preconditions -> commit
 ```
 
 Use platform-managed, scoped leases when work must be coordinated across API processes; see [Managed Queue](managed-queue.md). Revalidate ownership before side effects and result writes, and stop advancement after lease loss. A lease does not replace database constraints or external-operation idempotency, and it must not retain a database transaction while work runs.

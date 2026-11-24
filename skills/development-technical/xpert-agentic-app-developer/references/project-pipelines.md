@@ -38,6 +38,8 @@ Use released public SDK/contracts in plugins. A source-only API does not prove t
 
 ## Migration and Verification
 
+For a remote pipeline archive, use the platform’s [`plugin:deploy:archive` command](../../xpert-plugin-development/SKILL.md#deployment-and-verification) before verifying the organization’s role Assistants and business flow.
+
 When replacing a plugin-owned pipeline, remove superseded scheduling and pipeline View registrations, actions, assets, navigation, and documentation together. Preserve business services, approval semantics, Case/Project identities, and persisted history. Do not turn code cleanup into a data reset.
 
 Validate the affected contracts and end-to-end path: configuration, actual business finalization, approval/rejection, duplicate requests, stale input, retry/cancel, cross-scope access, historical rounds, and exact business/execution navigation. Use existing platform and App tests rather than reimplementing platform behavior. Distinguish fixture tests from real installed-host execution, and simulation from external-system confirmation.

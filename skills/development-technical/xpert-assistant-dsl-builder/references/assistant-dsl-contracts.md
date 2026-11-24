@@ -153,7 +153,7 @@ For every entrypoint:
 - Declare an Agent node with the exact key in the source DSL.
 - Keep the node present in the built asset, installed draft, and published graph.
 - Connect only the middleware, Skills, tools, and knowledge required by that role.
-- Define structured parameters for authoritative IDs, expected revisions, and bounded collections.
+- Define structured parameters for authoritative IDs and bounded collections. Carry an expected revision only when the child’s work depends on the content of a specific version.
 - Make the prompt require controlled begin/append/finalize tools when the role creates revisioned data.
 - Use a compact objective in the runtime prompt; do not encode identity or authority only in prose.
 - Keep internal task narration muted when appropriate while preserving the execution tree and compact result.
